@@ -89,7 +89,9 @@ bet:document.getElementById('betScreen')
 
 function show(screen){
 Object.values(screens).forEach(s=>s.classList.add('hidden'));
-screens[screen].classList.remove('hidden');
+if(screen && screens[screen]){
+  screens[screen].classList.remove('hidden');
+}
 }
 
 const coinsEl=document.getElementById('coins');
