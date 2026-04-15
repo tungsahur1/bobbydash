@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Retro Casino 5.1</title>
+<title>Retro Casino 6.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
 <style>
@@ -28,14 +28,12 @@ z-index:2;
 .hidden{display:none}
 
 button{
-padding:25px;
-margin:15px;
-font-size:16px;
+padding:20px;
+margin:10px;
 background:black;
 color:#0ff;
-border:4px solid #0ff;
+border:3px solid #0ff;
 cursor:pointer;
-transition:0.2s;
 }
 button:hover{transform:scale(1.1)}
 
@@ -48,42 +46,69 @@ height:100%;
 z-index:0;
 }
 
+#editorBox{
+width:500px;
+height:300px;
+border:5px solid white;
+position:relative;
+margin-bottom:20px;
+}
+
+.player{
+width:40px;
+height:40px;
+position:absolute;
+background:blue;
+cursor:grab;
+}
+
+.goalBtn{
+padding:10px;
+background:#2c6ed5;
+margin:5px;
+}
+
 #topUI{position:absolute;top:10px;left:10px;z-index:3}
-#bottomUI{position:absolute;bottom:10px;left:10px;z-index:3}
 </style>
 </head>
 <body>
 
+<!-- START -->
 <div id="startScreen" class="screen">
 <h1>RETRO CASINO</h1>
 <button onclick="startGame()">START</button>
 </div>
 
+<!-- MENU -->
 <div id="menuScreen" class="screen hidden">
 <button onclick="openGames()">PLAY</button>
-<button onclick="openUpgrades()">UPGRADES</button>
-<button onclick="openShop()">SHOP</button>
+<button onclick="openEditor()">TEAM EDITOR</button>
 </div>
 
+<!-- GAMES -->
 <div id="gamesScreen" class="screen hidden">
 <button onclick="startSoccer()">SOCCER</button>
-<button onclick="startFootball()">FOOTBALL</button>
 <button onclick="backMenu()">BACK</button>
 </div>
 
-<div id="upgradeScreen" class="screen hidden">
-<button onclick="editTeam()">TEAM EDITOR</button>
-<button onclick="backMenu()">BACK</button>
+<!-- EDITOR -->
+<div id="editorScreen" class="screen hidden">
+
+<div id="editorBox"></div>
+
+<div>
+GOALS:
+<button class="goalBtn" onclick="setGoals(1)">1</button>
+<button class="goalBtn" onclick="setGoals(2)">2</button>
+<button class="goalBtn" onclick="setGoals(3)">3</button>
 </div>
 
-<div id="shopScreen" class="screen hidden">
-<button onclick="riskUpgrade()">RISK MODE (60)</button>
-<p style="font-size:10px;">Win MORE coins, lose MORE coins</p>
+<button onclick="saveLayout()">SAVE</button>
 <button onclick="backMenu()">BACK</button>
+
 </div>
 
 <div id="topUI">🪙 <span id="coins">0</span></div>
-<div id="bottomUI"><span id="user"></span> | LVL <span id="lvl"></span></div>
 
 <canvas id="game"></canvas>
 
@@ -91,50 +116,80 @@ z-index:0;
 
 // DATA
 let data = JSON.parse(localStorage.getItem("retroSave")) || {
-coins:0,lvl:1,user:null,risk:false,
-team:"barcelona",
-goalsToWin:3
+coins:0,
+layout:[
+{x:50,y:50},
+{x:200,y:120},
+{x:350,y:200}
+],
+goals:1
 };
-
-if(!data.user) data.user = prompt("Username");
-
-// TEAM COLORS
-const teamColors={
-barcelona:["#a50044","#004d98"],
-madrid:["#ffffff","#ccc"],
-arsenal:["#ef0107","#fff"]
-};
-
-// SCREENS
-const screens={
-start:startScreen,
-menu:menuScreen,
-games:gamesScreen,
-upgrade:upgradeScreen,
-shop:shopScreen
-};
-
-function show(name){
-Object.values(screens).forEach(s=>s.classList.add("hidden"));
-if(screens[name]) screens[name].classList.remove("hidden");
-}
 
 // SAVE
 function save(){
 localStorage.setItem("retroSave",JSON.stringify(data));
 coins.innerText=data.coins;
-lvl.innerText=data.lvl;
-user.innerText=data.user;
+}
+
+// SCREENS
+function show(id){
+document.querySelectorAll(".screen").forEach(s=>s.classList.add("hidden"));
+if(id) document.getElementById(id).classList.remove("hidden");
 }
 
 // NAV
-function startGame(){show("menu");save()}
-function openGames(){show("games")}
-function openUpgrades(){show("upgrade")}
-function openShop(){show("shop")}
-function backMenu(){show("menu")}
+function startGame(){show("menuScreen")}
+function openGames(){show("gamesScreen")}
+function openEditor(){show("editorScreen"); loadEditor()}
+function backMenu(){show("menuScreen")}
 
-// CANVAS
+// ===== EDITOR =====
+let dragging=null;
+
+function loadEditor(){
+let box=document.getElementById("editorBox");
+box.innerHTML="";
+
+data.layout.forEach((p,i)=>{
+let el=document.createElement("div");
+el.className="player";
+el.style.left=p.x+"px";
+el.style.top=p.y+"px";
+
+el.onmousedown=()=>dragging=el;
+
+box.appendChild(el);
+});
+
+document.onmousemove=e=>{
+if(dragging){
+let rect=box.getBoundingClientRect();
+dragging.style.left=(e.clientX-rect.left-20)+"px";
+dragging.style.top=(e.clientY-rect.top-20)+"px";
+}
+};
+
+document.onmouseup=()=>dragging=null;
+}
+
+function saveLayout(){
+let players=document.querySelectorAll(".player");
+players.forEach((p,i)=>{
+data.layout[i]={
+x:parseInt(p.style.left),
+y:parseInt(p.style.top)
+};
+});
+save();
+alert("Saved!");
+}
+
+function setGoals(n){
+data.goals=n;
+save();
+}
+
+// ===== GAME =====
 const c=document.getElementById("game");
 const ctx=c.getContext("2d");
 
@@ -145,102 +200,29 @@ c.height=window.innerHeight;
 resize();
 window.onresize=resize;
 
-let loop=null;
+let loop;
 
-function clearCanvas(){
-ctx.clearRect(0,0,c.width,c.height);
-}
-
-function stopGame(){
-if(loop) clearInterval(loop);
-loop=null;
-document.onkeydown=null;
-document.onmousemove=null;
-clearCanvas();
-}
-
-// DRAW FULL BODY PLAYER
-function drawPlayer(p,colors){
-ctx.fillStyle=colors[0];
-ctx.fillRect(p.x,p.y,20,30); // body
-
-ctx.fillStyle=colors[1];
-ctx.fillRect(p.x,p.y+30,20,10); // legs
-
-ctx.fillStyle="#fff";
-ctx.fillRect(p.x+5,p.y-10,10,10); // head
-}
-
-// TEAM EDITOR
-function editTeam(){
-let t=prompt("Team: barcelona / madrid / arsenal",data.team);
-if(t) data.team=t;
-
-let g=prompt("Goals to win?",data.goalsToWin);
-if(g) data.goalsToWin=parseInt(g);
-
-save();
-}
-
-// XP ORBS
-function xp(){
-let orbs=[];
-for(let i=0;i<10;i++){
-orbs.push({x:Math.random()*c.width,y:Math.random()*c.height});
-}
-
-let anim=setInterval(()=>{
-clearCanvas();
-ctx.fillStyle="yellow";
-orbs.forEach(o=>{
-o.x+=(c.width-50-o.x)*0.05;
-o.y+=(c.height-50-o.y)*0.05;
-ctx.beginPath();
-ctx.arc(o.x,o.y,5,0,6.28);
-ctx.fill();
-});
-},30);
-
-setTimeout(()=>clearInterval(anim),1000);
-}
-
-// SOCCER
 function startSoccer(){
-stopGame();
 show("");
+clearInterval(loop);
 
-let team=teamColors[data.team];
-
-let players=[
-{x:200,y:200},{x:200,y:350},{x:200,y:500}
-];
-
+// load layout
+let players=data.layout.map(p=>({x:p.x+100,y:p.y+100}));
 let enemies=[
-{x:c.width-200,y:200},{x:c.width-200,y:350},{x:c.width-200,y:500}
+{x:c.width-200,y:200},
+{x:c.width-200,y:350},
+{x:c.width-200,y:500}
 ];
 
 let ball={x:c.width/2,y:c.height/2};
 let current=0;
-let score=0,enemyScore=0;
-let aim={x:0,y:0};
 
-// countdown
-let count=3;
-let cd=setInterval(()=>{
-clearCanvas();
-ctx.fillStyle="white";
-ctx.font="50px Arial";
-ctx.fillText(count,c.width/2,c.height/2);
-count--;
-if(count<0){
-clearInterval(cd);
-startLoop();
-}
-},800);
+let score=0;
+let enemyScore=0;
 
-function startLoop(){
+// GAME LOOP
 loop=setInterval(()=>{
-clearCanvas();
+ctx.clearRect(0,0,c.width,c.height);
 
 // field
 ctx.fillStyle="green";
@@ -248,174 +230,58 @@ ctx.fillRect(0,0,c.width,c.height);
 
 // goals
 ctx.fillStyle="white";
-ctx.fillRect(20,c.height/2-120,20,240);
-ctx.fillRect(c.width-40,c.height/2-120,20,240);
+ctx.fillRect(20,c.height/2-100,20,200);
+ctx.fillRect(c.width-40,c.height/2-100,20,200);
 
-// crowd
-for(let i=0;i<80;i++){
-ctx.fillStyle="gray";
-ctx.fillRect(Math.random()*c.width,Math.random()*80,2,10);
-}
-
-// ball
+// BALL
 ctx.fillStyle="white";
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,10,0,6.28);
 ctx.fill();
 
-// players
-players.forEach(p=>drawPlayer(p,team));
+// PLAYERS
+players.forEach(p=>{
+ctx.fillStyle="blue";
+ctx.fillRect(p.x,p.y,30,30);
+});
 
-// enemies
-enemies.forEach(e=>{
-drawPlayer(e,["red","#fff"]);
-
-// AI chase ball
+// ENEMIES (FIXED AI SPACING)
+enemies.forEach((e,i)=>{
 let dx=ball.x-e.x;
 let dy=ball.y-e.y;
+
 e.x+=dx*0.02;
 e.y+=dy*0.02;
 
+// separation (fix merging)
+enemies.forEach(other=>{
+if(other!==e){
+let dist=Math.hypot(e.x-other.x,e.y-other.y);
+if(dist<40){
+e.x+=(e.x-other.x)*0.05;
+e.y+=(e.y-other.y)*0.05;
+}
+}
+});
+
+ctx.fillStyle="red";
+ctx.fillRect(e.x,e.y,30,30);
+
+// steal ball
 if(Math.abs(e.x-ball.x)<25){
 ball.x-=4;
 }
 });
 
-// BALL LOCK
+// PLAYER CONTROL
 let p=players[current];
+
 if(Math.abs(p.x-ball.x)<30){
-ball.x=p.x+10;
-ball.y=p.y;
-}
-
-// AIM
-ctx.strokeStyle="yellow";
-ctx.beginPath();
-ctx.moveTo(p.x,p.y);
-ctx.lineTo(aim.x,aim.y);
-ctx.stroke();
-
-// GOALS
-if(ball.x>c.width-50){
-score++;
-explode(players.concat(enemies));
-reset();
-}
-if(ball.x<50){
-enemyScore++;
-explode(players.concat(enemies));
-reset();
-}
-
-if(score>=data.goalsToWin || enemyScore>=data.goalsToWin){
-endSoccer(score>enemyScore);
-}
-
-},30);
-
-// movement
-document.onkeydown=e=>{
-if(e.key==="ArrowUp")players[current].y-=10;
-if(e.key==="ArrowDown")players[current].y+=10;
-if(e.key==="ArrowLeft")players[current].x-=10;
-if(e.key==="ArrowRight")players[current].x+=10;
-};
-
-// aim
-document.onmousemove=e=>{
-aim.x=e.clientX;
-aim.y=e.clientY;
-};
-
-// PASS (BIG HITBOX)
-document.onclick=()=>{
-players.forEach((p,i)=>{
-if(Math.abs(aim.x-p.x)<60 && Math.abs(aim.y-p.y)<60){
-current=i;
 ball.x=p.x;
 ball.y=p.y;
 }
-});
-};
-}
 
-function explode(all){
-all.forEach(p=>{
-p.x+=Math.random()*200-100;
-p.y+=Math.random()*200-100;
-});
-}
-
-function reset(){
-ball.x=c.width/2;
-ball.y=c.height/2;
-}
-
-function endSoccer(win){
-stopGame();
-data.coins+=win?150:50;
-data.lvl++;
-xp();
-save();
-show("games");
-}
-}
-
-// FOOTBALL
-function startFootball(){
-stopGame();
-show("");
-
-let p={x:100,y:c.height/2};
-let enemies=[
-{x:c.width-200,y:200},
-{x:c.width-200,y:400}
-];
-
-let ball={x:c.width/2,y:c.height/2};
-let aim={x:0,y:0};
-
-loop=setInterval(()=>{
-clearCanvas();
-
-ctx.fillStyle="#063";
-ctx.fillRect(0,0,c.width,c.height);
-
-ctx.fillStyle="white";
-ctx.fillRect(ball.x,ball.y,10,10);
-
-ctx.fillStyle="blue";
-ctx.fillRect(p.x,p.y,30,30);
-
-// enemies
-enemies.forEach(e=>{
-let dx=ball.x-e.x;
-let dy=ball.y-e.y;
-e.x+=dx*0.03;
-e.y+=dy*0.03;
-
-ctx.fillStyle="red";
-ctx.fillRect(e.x,e.y,30,30);
-});
-
-// aim
-ctx.strokeStyle="yellow";
-ctx.beginPath();
-ctx.moveTo(p.x,p.y);
-ctx.lineTo(aim.x,aim.y);
-ctx.stroke();
-
-// control
-if(Math.abs(p.x-ball.x)<30){
-ball.x+=10;
-}
-
-if(ball.x>c.width-50){
-endFootball(true);
-}
-
-},30);
-
+// movement
 document.onkeydown=e=>{
 if(e.key==="ArrowUp")p.y-=10;
 if(e.key==="ArrowDown")p.y+=10;
@@ -423,34 +289,60 @@ if(e.key==="ArrowLeft")p.x-=10;
 if(e.key==="ArrowRight")p.x+=10;
 };
 
-document.onmousemove=e=>{
-aim.x=e.clientX;
-aim.y=e.clientY;
+// PASS (BIG HITBOX)
+document.onclick=e=>{
+players.forEach((pl,i)=>{
+if(Math.abs(e.clientX-pl.x)<80 && Math.abs(e.clientY-pl.y)<80){
+current=i;
+ball.x=pl.x;
+ball.y=pl.y;
+}
+});
 };
+
+// GOALS
+if(ball.x>c.width-50){
+score++;
+resetPositions();
+}
+if(ball.x<50){
+enemyScore++;
+resetPositions();
 }
 
-function endFootball(win){
-stopGame();
-let reward=win?150:50;
-if(data.risk) reward*=2;
-data.coins+=reward;
-xp();
+ctx.fillStyle="white";
+ctx.fillText(score+" - "+enemyScore, c.width/2,50);
+
+if(score>=data.goals || enemyScore>=data.goals){
+endGame(score>enemyScore);
+}
+
+},30);
+
+// RESET FIX (NO DRIFT)
+function resetPositions(){
+ball.x=c.width/2;
+ball.y=c.height/2;
+
+players=data.layout.map(p=>({x:p.x+100,y:p.y+100}));
+
+enemies=[
+{x:c.width-200,y:200},
+{x:c.width-200,y:350},
+{x:c.width-200,y:500}
+];
+}
+
+function endGame(win){
+clearInterval(loop);
+data.coins+=win?100:30;
 save();
-show("games");
+show("gamesScreen");
 }
 
-// SHOP
-function riskUpgrade(){
-if(data.coins>=60){
-data.coins-=60;
-data.risk=true;
-alert("Risk Mode Enabled");
-save();
-}
 }
 
-// INIT
-show("start");
+show("startScreen");
 save();
 
 </script>
