@@ -5,8 +5,15 @@
 <title>Retro Casino 1.05</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-body{margin:0;background:black;color:#0ff;font-family:'Press Start 2P';overflow:hidden}
+body{
+  margin:0;
+  background:black;
+  color:#0ff;
+  font-family:'Press Start 2P';
+  overflow:hidden;
+}
 
+/* 🔥 FIXED CANVAS */
 canvas{
   position:absolute;
   top:0;
@@ -14,7 +21,7 @@ canvas{
   width:100vw;
   height:100vh;
   z-index:0;
-  pointer-events:none; /* 🔥 FIX */
+  pointer-events:none;
 }
 
 button{
@@ -82,11 +89,9 @@ button{
 
 <script>
 
-// DATA
 let data=JSON.parse(localStorage.getItem('retroUltra'))||{coins:0,xp:0,lvl:1,user:null};
 if(!data.user){data.user=prompt('ENTER USERNAME');}
 
-// ELEMENTS
 const startBtn=document.getElementById('startBtn');
 const startScreen=document.getElementById('startScreen');
 const menuScreen=document.getElementById('menuScreen');
@@ -132,7 +137,7 @@ bottomBar.classList.remove('hidden');
 save();
 }
 
-// DASH GAME
+// DASH
 function dash(){
 stop();
 menuScreen.classList.add('hidden');
@@ -175,7 +180,7 @@ save();
 menuScreen.classList.remove('hidden');
 }
 
-// BET GAME
+// BET
 function startBet(choice){
 stop();
 betScreen.classList.add('hidden');
@@ -250,14 +255,12 @@ menuScreen.classList.remove('hidden');
 }
 
 // BUTTONS
-
 document.getElementById('dashBtn').onclick=dash;
 
 document.getElementById('betBtn').onclick=()=>{
 menuScreen.classList.add('hidden');
 betScreen.classList.remove('hidden');
 }
-
 
 document.getElementById('soccerBtn').onclick=soccer;
 
