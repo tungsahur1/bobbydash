@@ -5,46 +5,66 @@
 <title>RETRO CASINO ULTRA</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-body{margin:0;background:#000;color:#0ff;font-family:'Press Start 2P';overflow:hidden}
-canvas{position:absolute;top:0;left:0;width:100vw;height:100vh;background:linear-gradient(#000,#111)}
-button{font-family:'Press Start 2P';background:#000;color:#0ff;border:2px solid #0ff;padding:10px;margin:8px;cursor:pointer}
+body{margin:0;font-family:'Press Start 2P';overflow:hidden;background:black}
+canvas{position:absolute;top:0;left:0;width:100vw;height:100vh}
+button{font-family:'Press Start 2P';background:#000;color:#0ff;border:3px solid #0ff;padding:20px;margin:15px;font-size:14px;cursor:pointer}
 .hidden{display:none}
-#ui{position:absolute;top:10px;left:10px;z-index:10}
-#bottomBar{position:absolute;bottom:10px;left:10px;color:#fff;z-index:10}
+#startScreen{position:absolute;width:100%;height:100%;background:linear-gradient(#020024,#090979,#00d4ff);display:flex;flex-direction:column;justify-content:center;align-items:center;color:white}
 #menuScreen{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
-.team{width:90px;height:60px;display:inline-block;border:2px solid white}
+#ui{position:absolute;top:10px;left:10px;color:#0ff}
+#bottomBar{position:absolute;bottom:10px;left:10px;color:#fff}
+#version{position:absolute;bottom:10px;right:10px;color:#fff}
+#patchNotes{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#000;border:3px solid #0ff;padding:20px;width:80%;max-height:70%;overflow:auto}
 </style>
 </head>
 <body>
 
-<div id="ui">
-<button onclick="menu()">MENU</button>
+<div id="startScreen">
+<h1>RETRO CASINO</h1>
+<button onclick="startGame()">START</button>
+<button onclick="showPatch()">PATCH NOTES</button>
+<div id="version">VERSION 1.05</div>
+</div>
+
+<div id="patchNotes" class="hidden">
+<h2>PATCH NOTES 1.05</h2>
+<p>- Fullscreen gameplay added</p>
+<p>- Soccer game improved with players</p>
+<p>- Dash run upgraded with spikes + trails</p>
+<p>- Betting game now visual race</p>
+<p>- XP + Level system added</p>
+<p>- Particle effects added</p>
+<p>- UI improvements</p>
+<button onclick="hidePatch()">CLOSE</button>
+</div>
+
+<div id="ui" class="hidden">
 <span>🪙 <span id="coins">0</span></span>
 </div>
 
-<div id="bottomBar">
+<div id="bottomBar" class="hidden">
 <span id="user"></span> | LVL <span id="lvl"></span> | XP <span id="xp"></span>
 </div>
 
-<div id="menuScreen">
+<div id="menuScreen" class="hidden">
 <button onclick="dash()">DASH RUN</button>
 <button onclick="betMenu()">RETRO BALL</button>
 <button onclick="soccer()">SOCCER</button>
+<button onclick="menu()">BACK</button>
 </div>
 
 <div id="betScreen" class="hidden">
-<h3>BET ON A TEAM</h3>
-<div class="team" style="background:red" onclick="bet(0)"></div>
-<div class="team" style="background:blue" onclick="bet(1)"></div>
-<div class="team" style="background:green" onclick="bet(2)"></div>
-<div class="team" style="background:yellow" onclick="bet(3)"></div>
+<h3 style="color:white">BET ON A TEAM</h3>
+<button onclick="bet(0)">RED</button>
+<button onclick="bet(1)">BLUE</button>
+<button onclick="bet(2)">GREEN</button>
+<button onclick="bet(3)">YELLOW</button>
 </div>
 
 <canvas id="game"></canvas>
 
 <script>
 let data=JSON.parse(localStorage.getItem('retroUltra'))||{coins:0,xp:0,lvl:1,user:null};
-
 if(!data.user){data.user=prompt('ENTER USERNAME');}
 
 const c=document.getElementById('game');
@@ -53,97 +73,58 @@ resize();window.onresize=resize;
 function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
 
 function save(){localStorage.setItem('retroUltra',JSON.stringify(data));coins.innerText=data.coins;xp.innerText=data.xp;lvl.innerText=data.lvl;user.innerText=data.user}
-
 function gainXP(n){data.xp+=n;if(data.xp>=data.lvl*100){data.xp=0;data.lvl++;}}
-
 function clear(){ctx.fillStyle='#111';ctx.fillRect(0,0,c.width,c.height)}
+function particles(x,y,color){for(let i=0;i<15;i++){ctx.fillStyle=color;ctx.fillRect(x+Math.random()*30-15,y+Math.random()*30-15,4,4);}}
 
-function particles(x,y,color){for(let i=0;i<10;i++){
-ctx.fillStyle=color;
-ctx.fillRect(x+Math.random()*20-10,y+Math.random()*20-10,4,4);
-}}
+function startGame(){startScreen.classList.add('hidden');menuScreen.classList.remove('hidden');ui.classList.remove('hidden');bottomBar.classList.remove('hidden');save();}
+function showPatch(){patchNotes.classList.remove('hidden');}
+function hidePatch(){patchNotes.classList.add('hidden');}
 
-function menu(){stop();document.getElementById('menuScreen').classList.remove('hidden');document.getElementById('betScreen').classList.add('hidden')}
+function menu(){stop();menuScreen.classList.remove('hidden');betScreen.classList.add('hidden')}
 
-// DASH GAME
 let loop;
-function dash(){stop();menuScreen.classList.add('hidden');
+function dash(){menuScreen.classList.add('hidden');
 let x=150,y=c.height-200,vy=0;let spikes=[];let trail=[];
 loop=setInterval(()=>{
 clear();
 vy+=1;y+=vy;if(y>c.height-200){y=c.height-200;vy=0}
-trail.push({x,y}); if(trail.length>10)trail.shift();
+trail.push({x,y});if(trail.length>10)trail.shift();
 ctx.fillStyle='cyan';trail.forEach(t=>ctx.fillRect(t.x,t.y,40,40));
 ctx.fillStyle='white';ctx.fillRect(x,y,40,40);
 if(Math.random()<0.04)spikes.push({x:c.width,y:c.height-200});
 ctx.fillStyle='magenta';
-spikes.forEach(s=>{
-s.x-=12;
-ctx.beginPath();ctx.moveTo(s.x,s.y+40);ctx.lineTo(s.x+20,s.y);ctx.lineTo(s.x+40,s.y+40);ctx.fill();
-if(s.x<x+40&&s.x+40>x&&y>c.height-230){particles(x,y,'red');endDash();}
-});
+spikes.forEach(s=>{s.x-=12;ctx.beginPath();ctx.moveTo(s.x,s.y+40);ctx.lineTo(s.x+20,s.y);ctx.lineTo(s.x+40,s.y+40);ctx.fill();
+if(s.x<x+40&&s.x+40>x&&y>c.height-230){particles(x,y,'red');endDash();}});
 },30);
 document.onkeydown=e=>{if(e.key==='ArrowUp'&&y===c.height-200)vy=-20};}
-function endDash(){stop();let r=60+Math.random()*60;data.coins+=Math.floor(r);gainXP(30);alert('CRASH +'+Math.floor(r));save();menu()}
+function endDash(){stop();let r=60+Math.random()*60;data.coins+=Math.floor(r);gainXP(30);alert('CRASH +'+Math.floor(r));save();menu();}
 
-// BET GAME VISUAL
 function betMenu(){menuScreen.classList.add('hidden');betScreen.classList.remove('hidden')}
-function bet(choice){stop();betScreen.classList.add('hidden');
+function bet(choice){betScreen.classList.add('hidden');
 let players=[0,0,0,0];
 loop=setInterval(()=>{
 clear();
 players=players.map(p=>p+Math.random()*8);
-players.forEach((p,i)=>{
-ctx.fillStyle=['red','blue','green','yellow'][i];
-ctx.fillRect(p,100+i*100,60,40);
-particles(p,100+i*100,['red','blue','green','yellow'][i]);
-});
+players.forEach((p,i)=>{ctx.fillStyle=['red','blue','green','yellow'][i];ctx.fillRect(p,100+i*100,60,40);particles(p,100+i*100,['red','blue','green','yellow'][i]);});
 let win=players.indexOf(Math.max(...players));
-if(players[win]>c.width-120){stop();
-if(win===choice){data.coins+=120;gainXP(40);alert('WIN +120')}else alert('LOSE');
-save();menu();}
+if(players[win]>c.width-120){stop();if(win===choice){data.coins+=120;gainXP(40);alert('WIN +120')}else alert('LOSE');save();menu();}
 },30);
 }
 
-// SOCCER GAME
-function soccer(){stop();menuScreen.classList.add('hidden');
-let p={x:60,y:c.height/2};
-let ball={x:p.x+20,y:p.y};
-let defs=[{x:c.width/2,y:150},{x:c.width/2,y:350}];
+function soccer(){menuScreen.classList.add('hidden');
+let p={x:60,y:c.height/2};let ball={};let defs=[{x:c.width/2,y:150},{x:c.width/2,y:350}];
 loop=setInterval(()=>{
 clear();
 ctx.fillStyle='white';ctx.fillRect(c.width-60,c.height/2-80,10,160);
-
-// player
-ctx.fillStyle='yellow';ctx.fillRect(p.x,p.y,20,40);
-ctx.beginPath();ctx.arc(p.x+10,p.y-5,6,0,6.28);ctx.fill();
-
-// ball
-ball.x=p.x+25;ball.y=p.y+10;
-ctx.fillStyle='white';ctx.beginPath();ctx.arc(ball.x,ball.y,5,0,6.28);ctx.fill();
-
-// defenders
-ctx.fillStyle='red';
-defs.forEach(d=>{
-d.y+=Math.random()*8-4;
-ctx.fillRect(d.x,d.y,20,40);
-ctx.beginPath();ctx.arc(d.x+10,d.y-5,6,0,6.28);ctx.fill();
+ctx.fillStyle='yellow';ctx.fillRect(p.x,p.y,20,40);ctx.beginPath();ctx.arc(p.x+10,p.y-5,6,0,6.28);ctx.fill();
+ball.x=p.x+25;ball.y=p.y+10;ctx.fillStyle='white';ctx.beginPath();ctx.arc(ball.x,ball.y,5,0,6.28);ctx.fill();
+ctx.fillStyle='red';defs.forEach(d=>{d.y+=Math.random()*8-4;ctx.fillRect(d.x,d.y,20,40);ctx.beginPath();ctx.arc(d.x+10,d.y-5,6,0,6.28);ctx.fill();
 if(Math.abs(p.x-d.x)<25&&Math.abs(p.y-d.y)<40){particles(p.x,p.y,'red');endSoccer(false)}});
-
 if(p.x>c.width-70){particles(p.x,p.y,'green');endSoccer(true)}
 },30);
-
-document.onkeydown=e=>{
-if(e.key==='ArrowUp')p.y-=12;
-if(e.key==='ArrowDown')p.y+=12;
-if(e.key==='ArrowLeft')p.x-=12;
-if(e.key==='ArrowRight')p.x+=12;
-};}
-
-function endSoccer(win){stop();
-if(win){let r=80+Math.random()*40;data.coins+=Math.floor(r);gainXP(50);alert('GOAL +'+Math.floor(r))}
-else alert('TACKLED');
-save();menu();}
+document.onkeydown=e=>{if(e.key==='ArrowUp')p.y-=12;if(e.key==='ArrowDown')p.y+=12;if(e.key==='ArrowLeft')p.x-=12;if(e.key==='ArrowRight')p.x+=12};}
+function endSoccer(win){stop();if(win){let r=80+Math.random()*40;data.coins+=Math.floor(r);gainXP(50);alert('GOAL +'+Math.floor(r))}else alert('TACKLED');save();menu();}
 
 function stop(){clearInterval(loop)}
 
