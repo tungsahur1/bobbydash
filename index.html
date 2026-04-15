@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>RETRO CASINO 1.05</title>
+<title>RETRO CASINO WORKING</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
 body{margin:0;font-family:'Press Start 2P';overflow:hidden;background:black}
@@ -14,7 +14,6 @@ button{font-family:'Press Start 2P';background:#000;color:#0ff;border:3px solid 
 #ui{position:absolute;top:10px;left:10px;color:#0ff}
 #bottomBar{position:absolute;bottom:10px;left:10px;color:#fff}
 #version{position:absolute;bottom:10px;right:10px;color:#fff}
-#patchNotes{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#000;border:3px solid #0ff;padding:20px;width:80%;max-height:70%;overflow:auto}
 </style>
 </head>
 <body>
@@ -22,25 +21,11 @@ button{font-family:'Press Start 2P';background:#000;color:#0ff;border:3px solid 
 <div id="startScreen">
 <h1>RETRO CASINO</h1>
 <button id="startBtn">START</button>
-<button id="patchBtn">PATCH NOTES</button>
 <div id="version">VERSION 1.05</div>
 </div>
 
-<div id="patchNotes" class="hidden">
-<h2>PATCH NOTES 1.05</h2>
-<p>- Full gameplay fixed</p>
-<p>- All buttons working</p>
-<p>- Dash, Soccer, Betting playable</p>
-<button id="closePatch">CLOSE</button>
-</div>
-
-<div id="ui" class="hidden">
-<span>🪙 <span id="coins">0</span></span>
-</div>
-
-<div id="bottomBar" class="hidden">
-<span id="user"></span> | LVL <span id="lvl"></span> | XP <span id="xp"></span>
-</div>
+<div id="ui" class="hidden">🪙 <span id="coins">0</span></div>
+<div id="bottomBar" class="hidden"><span id="user"></span> | LVL <span id="lvl"></span> | XP <span id="xp"></span></div>
 
 <div id="menuScreen" class="hidden">
 <button id="dashBtn">DASH RUN</button>
@@ -50,33 +35,51 @@ button{font-family:'Press Start 2P';background:#000;color:#0ff;border:3px solid 
 
 <div id="betScreen" class="hidden">
 <h3 style="color:white">BET ON A TEAM</h3>
-<button onclick="startBet(0)">RED</button>
-<button onclick="startBet(1)">BLUE</button>
-<button onclick="startBet(2)">GREEN</button>
-<button onclick="startBet(3)">YELLOW</button>
+<button data-team="0">RED</button>
+<button data-team="1">BLUE</button>
+<button data-team="2">GREEN</button>
+<button data-team="3">YELLOW</button>
 </div>
 
 <canvas id="game"></canvas>
 
 <script>
+document.addEventListener('DOMContentLoaded',()=>{
+
 let data=JSON.parse(localStorage.getItem('retroUltra'))||{coins:0,xp:0,lvl:1,user:null};
 if(!data.user){data.user=prompt('ENTER USERNAME');}
 
 const c=document.getElementById('game');
 const ctx=c.getContext('2d');
+const startScreen=document.getElementById('startScreen');
+const menuScreen=document.getElementById('menuScreen');
+const betScreen=document.getElementById('betScreen');
+const ui=document.getElementById('ui');
+const bottomBar=document.getElementById('bottomBar');
+
+const coinsEl=document.getElementById('coins');
+const xpEl=document.getElementById('xp');
+const lvlEl=document.getElementById('lvl');
+const userEl=document.getElementById('user');
+
 function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
 resize();window.onresize=resize;
 
-function save(){localStorage.setItem('retroUltra',JSON.stringify(data));coins.innerText=data.coins;xp.innerText=data.xp;lvl.innerText=data.lvl;user.innerText=data.user}
+function save(){localStorage.setItem('retroUltra',JSON.stringify(data));coinsEl.innerText=data.coins;xpEl.innerText=data.xp;lvlEl.innerText=data.lvl;userEl.innerText=data.user}
 function gainXP(n){data.xp+=n;if(data.xp>=data.lvl*100){data.xp=0;data.lvl++;}}
 function clear(){ctx.fillStyle='#111';ctx.fillRect(0,0,c.width,c.height)}
 
-function startGame(){startScreen.classList.add('hidden');menuScreen.classList.remove('hidden');ui.classList.remove('hidden');bottomBar.classList.remove('hidden');save();}
-function showPatch(){patchNotes.classList.remove('hidden');}
-function hidePatch(){patchNotes.classList.add('hidden');}
-
 let loop;
 function stop(){clearInterval(loop);document.onkeydown=null}
+
+// START
+startBtn.onclick=()=>{
+startScreen.classList.add('hidden');
+menuScreen.classList.remove('hidden');
+ui.classList.remove('hidden');
+bottomBar.classList.remove('hidden');
+save();
+};
 
 // DASH
 function dash(){stop();menuScreen.classList.add('hidden');
@@ -108,7 +111,7 @@ function soccer(){stop();menuScreen.classList.add('hidden');
 let p={x:60,y:c.height/2};let defs=[{x:c.width/2,y:150},{x:c.width/2,y:350}];
 loop=setInterval(()=>{
 clear();ctx.fillStyle='white';ctx.fillRect(c.width-60,c.height/2-80,10,160);
-ctx.fillStyle='yellow';ctx.fillRect(p.x,p.y,20,40);ctx.beginPath();ctx.arc(p.x+10,p.y-5,6,0,6.28);ctx.fill();
+ctx.fillStyle='yellow';ctx.fillRect(p.x,p.y,20,40);
 ctx.fillStyle='red';defs.forEach(d=>{d.y+=Math.random()*8-4;ctx.fillRect(d.x,d.y,20,40);
 if(Math.abs(p.x-d.x)<25&&Math.abs(p.y-d.y)<40){endSoccer(false)}});
 if(p.x>c.width-70){endSoccer(true)}
@@ -117,14 +120,18 @@ document.onkeydown=e=>{if(e.key==='ArrowUp')p.y-=12;if(e.key==='ArrowDown')p.y+=
 function endSoccer(win){stop();if(win){let r=80+Math.random()*40;data.coins+=Math.floor(r);gainXP(40);alert('GOAL +'+Math.floor(r))}else alert('TACKLED');save();menuScreen.classList.remove('hidden')}
 
 // BUTTONS
-startBtn.onclick=startGame;
-patchBtn.onclick=showPatch;
-closePatch.onclick=hidePatch;
-dashBtn.onclick=dash;
-betBtn.onclick=()=>{menuScreen.classList.add('hidden');betScreen.classList.remove('hidden')};
-soccerBtn.onclick=soccer;
+
+document.getElementById('dashBtn').onclick=dash;
+document.getElementById('betBtn').onclick=()=>{menuScreen.classList.add('hidden');betScreen.classList.remove('hidden')};
+document.getElementById('soccerBtn').onclick=soccer;
+
+document.querySelectorAll('#betScreen button').forEach(btn=>{
+btn.onclick=()=>startBet(Number(btn.dataset.team));
+});
 
 save();
+
+});
 </script>
 
 </body>
