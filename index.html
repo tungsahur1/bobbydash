@@ -2,8 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Retro Casino FINAL</title>
+<title>Retro Casino 2.5</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
 <style>
 body{
   margin:0;
@@ -13,6 +14,15 @@ body{
   overflow:hidden;
 }
 
+/* BACKGROUND SPLIT */
+.bg{
+  background: linear-gradient(to right,
+    url('https://i.imgur.com/1.png') 33%,
+    url('https://i.imgur.com/2.png') 66%,
+    url('https://i.imgur.com/3.png') 100%);
+}
+
+/* SCREENS */
 .screen{
   position:absolute;
   width:100%;
@@ -25,14 +35,21 @@ body{
 
 .hidden{display:none}
 
+/* BUTTONS */
 button{
   font-family:'Press Start 2P';
-  padding:20px;
-  margin:10px;
+  padding:25px;
+  margin:15px;
+  font-size:16px;
   background:black;
   color:#0ff;
-  border:3px solid #0ff;
+  border:4px solid #0ff;
   cursor:pointer;
+  transition:0.15s;
+}
+
+button:hover{
+  transform:scale(1.1);
 }
 
 #topUI{
@@ -60,13 +77,13 @@ canvas{
 <body>
 
 <!-- START -->
-<div id="startScreen" class="screen">
+<div id="startScreen" class="screen bg">
 <h1>RETRO CASINO</h1>
 <button onclick="startGame()">START</button>
 </div>
 
 <!-- MENU -->
-<div id="menuScreen" class="screen hidden">
+<div id="menuScreen" class="screen bg hidden">
 <button onclick="openGames()">PLAY</button>
 <button onclick="openUpgrades()">UPGRADES</button>
 <button onclick="openShop()">SHOP</button>
@@ -83,25 +100,23 @@ canvas{
 <!-- BET -->
 <div id="betScreen" class="screen hidden">
 <h3>BET ON TEAM</h3>
-<button onclick="bet(0)">RED</button>
-<button onclick="bet(1)">BLUE</button>
-<button onclick="bet(2)">GREEN</button>
-<button onclick="bet(3)">YELLOW</button>
+<button onclick="betGame(0)">RED</button>
+<button onclick="betGame(1)">BLUE</button>
 <button onclick="backGames()">BACK</button>
 </div>
 
 <!-- UPGRADES -->
-<div id="upgradeScreen" class="screen hidden">
+<div id="upgradeScreen" class="screen bg hidden">
 <h3>UPGRADES</h3>
-<button onclick="upgradeCoins()">COIN BOOST (50)</button>
-<button onclick="upgradeLuck()">LUCK (75)</button>
+<button onclick="upgradeCoins()">COIN BOOST</button>
+<button onclick="upgradeDifficulty()">HARDER GAMES</button>
 <button onclick="backMenu()">BACK</button>
 </div>
 
 <!-- SHOP -->
-<div id="shopScreen" class="screen hidden">
+<div id="shopScreen" class="screen bg hidden">
 <h3>SHOP</h3>
-<button onclick="buyBoost()">BUY BOOST (50)</button>
+<button onclick="buyBoost()">BOOST (50)</button>
 <button onclick="backMenu()">BACK</button>
 </div>
 
@@ -113,7 +128,20 @@ canvas{
 
 <script>
 
-// SAFE ELEMENT GET (NO CRASH)
+// DATA
+let data = JSON.parse(localStorage.getItem("retroSave")) || {
+  coins:0,
+  lvl:1,
+  user:null,
+  boost:1,
+  difficulty:1
+};
+
+if(!data.user){
+  data.user = prompt("Enter username");
+}
+
+// SCREENS
 const screens = {
   start: document.getElementById("startScreen"),
   menu: document.getElementById("menuScreen"),
@@ -123,34 +151,20 @@ const screens = {
   shop: document.getElementById("shopScreen")
 };
 
-// SAFE SCREEN SWITCH
 function show(name){
   Object.values(screens).forEach(s => s.classList.add("hidden"));
-  if (screens[name]) screens[name].classList.remove("hidden");
+  if(screens[name]) screens[name].classList.remove("hidden");
 }
 
-// DATA
-let data = JSON.parse(localStorage.getItem("retroSave")) || {
-  coins:0,
-  lvl:1,
-  user:null,
-  boost:1,
-  luck:1
-};
-
-if(!data.user){
-  data.user = prompt("Enter username");
-}
-
-// SAVE SYSTEM
+// SAVE
 function save(){
   localStorage.setItem("retroSave", JSON.stringify(data));
-  document.getElementById("coins").innerText = data.coins;
-  document.getElementById("lvl").innerText = data.lvl;
-  document.getElementById("user").innerText = data.user;
+  coins.innerText = data.coins;
+  lvl.innerText = data.lvl;
+  user.innerText = data.user;
 }
 
-// NAVIGATION
+// NAV
 function startGame(){ show("menu"); save(); }
 function openGames(){ show("games"); }
 function openUpgrades(){ show("upgrade"); }
@@ -159,83 +173,189 @@ function backMenu(){ show("menu"); }
 function backGames(){ show("games"); }
 function openBet(){ show("bet"); }
 
-// DASH
+// CANVAS
+const c = document.getElementById("game");
+const ctx = c.getContext("2d");
+c.width = window.innerWidth;
+c.height = window.innerHeight;
+
+let loop;
+function stopGame(){
+  clearInterval(loop);
+  document.onkeydown = null;
+}
+
+// ================= DASH =================
 function startDash(){
+  stopGame();
   show(null);
-  setTimeout(()=>{
-    let reward = Math.floor(Math.random()*50*data.boost)+10;
-    alert("Dash +" + reward);
-    data.coins += reward;
-    data.lvl++;
-    save();
-    show("menu");
-  },1000);
-}
 
-// BET
-function bet(choice){
-  show(null);
-  setTimeout(()=>{
-    let win = Math.floor(Math.random()*4);
-    if(choice===win){
-      let reward = 100*data.luck;
-      alert("WIN +" + reward);
-      data.coins += reward;
-    } else {
-      alert("LOSE");
+  let y = c.height - 150;
+  let vy = 0;
+  let spikes = [];
+
+  loop = setInterval(()=>{
+    ctx.fillStyle="black";
+    ctx.fillRect(0,0,c.width,c.height);
+
+    vy += 1;
+    y += vy;
+    if(y > c.height-150){ y=c.height-150; vy=0 }
+
+    ctx.fillStyle="white";
+    ctx.fillRect(150,y,50,50);
+
+    if(Math.random() < 0.03 * data.difficulty){
+      spikes.push({x:c.width});
     }
-    save();
-    show("menu");
-  },1000);
+
+    ctx.fillStyle="red";
+    spikes.forEach(s=>{
+      s.x -= 10 + data.difficulty*2;
+      ctx.fillRect(s.x,c.height-150,40,40);
+
+      if(s.x < 200 && s.x > 120 && y > c.height-200){
+        endDash();
+      }
+    });
+
+  },30);
+
+  document.onkeydown = e=>{
+    if(e.key==="ArrowUp" && y===c.height-150) vy=-20;
+  };
 }
 
-// SOCCER
+function endDash(){
+  stopGame();
+  let reward = Math.floor(50*data.boost);
+  data.coins += reward;
+  data.lvl++;
+  alert("Dash +" + reward);
+  save();
+  show("menu");
+}
+
+// ================= SOCCER =================
 function startSoccer(){
+  stopGame();
   show(null);
-  setTimeout(()=>{
-    let win = Math.random()>0.5;
-    if(win){
-      let reward = 80*data.boost;
-      alert("GOAL +" + reward);
-      data.coins += reward;
-    } else {
-      alert("MISSED");
+
+  let p = {x:100,y:c.height/2};
+  let ball = {x:130,y:c.height/2};
+
+  loop = setInterval(()=>{
+    ctx.fillStyle="green";
+    ctx.fillRect(0,0,c.width,c.height);
+
+    // goal
+    ctx.fillStyle="white";
+    ctx.fillRect(c.width-50,c.height/2-100,10,200);
+
+    // player
+    ctx.fillStyle="blue";
+    ctx.fillRect(p.x,p.y,40,40);
+
+    // ball
+    ctx.fillStyle="white";
+    ctx.beginPath();
+    ctx.arc(ball.x,ball.y,10,0,6.28);
+    ctx.fill();
+
+    // follow player
+    ball.x = p.x+30;
+    ball.y = p.y+20;
+
+    if(ball.x > c.width-60){
+      endSoccer(true);
     }
-    save();
-    show("menu");
-  },1000);
+
+  },30);
+
+  document.onkeydown = e=>{
+    if(e.key==="ArrowUp") p.y -=10;
+    if(e.key==="ArrowDown") p.y +=10;
+    if(e.key==="ArrowLeft") p.x -=10;
+    if(e.key==="ArrowRight") p.x +=10;
+  };
 }
 
-// UPGRADES
+function endSoccer(win){
+  stopGame();
+  if(win){
+    let reward = 100;
+    data.coins += reward;
+    alert("GOAL +" + reward);
+  }
+  save();
+  show("menu");
+}
+
+// ================= BET =================
+function betGame(choice){
+  stopGame();
+  show(null);
+
+  let red=0, blue=0;
+
+  loop = setInterval(()=>{
+    ctx.fillStyle="black";
+    ctx.fillRect(0,0,c.width,c.height);
+
+    red += Math.random()*5;
+    blue += Math.random()*5;
+
+    ctx.fillStyle="red";
+    ctx.fillRect(red,200,50,50);
+
+    ctx.fillStyle="blue";
+    ctx.fillRect(blue,300,50,50);
+
+    if(red>c.width-100 || blue>c.width-100){
+      stopGame();
+      let winner = red>blue ? 0:1;
+
+      if(winner===choice){
+        data.coins += 100;
+        alert("WIN!");
+      }else{
+        alert("LOSE!");
+      }
+
+      save();
+      show("menu");
+    }
+
+  },30);
+}
+
+// ================= UPGRADES =================
 function upgradeCoins(){
   if(data.coins>=50){
     data.coins-=50;
     data.boost+=0.5;
-    alert("BOOST UP");
     save();
   }
 }
 
-function upgradeLuck(){
+function upgradeDifficulty(){
   if(data.coins>=75){
     data.coins-=75;
-    data.luck+=0.5;
-    alert("LUCK UP");
+    data.difficulty+=0.5;
     save();
   }
 }
 
-// SHOP
+// ================= SHOP =================
 function buyBoost(){
   if(data.coins>=50){
     data.coins-=50;
     data.boost+=1;
-    alert("BOOST BOUGHT");
     save();
   }
 }
 
-// INIT (THIS FIXES YOUR START BUG)
+// INIT
 show("start");
 save();
 
