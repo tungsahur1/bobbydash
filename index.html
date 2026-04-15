@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Retro Casino 2.0</title>
+<title>Retro Casino FINAL</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
 body{
@@ -93,8 +93,8 @@ canvas{
 <!-- UPGRADES -->
 <div id="upgradeScreen" class="screen hidden">
 <h3>UPGRADES</h3>
-<button onclick="upgradeCoins()">COIN BOOST</button>
-<button onclick="upgradeLuck()">LUCK</button>
+<button onclick="upgradeCoins()">COIN BOOST (50)</button>
+<button onclick="upgradeLuck()">LUCK (75)</button>
 <button onclick="backMenu()">BACK</button>
 </div>
 
@@ -113,6 +113,22 @@ canvas{
 
 <script>
 
+// SAFE ELEMENT GET (NO CRASH)
+const screens = {
+  start: document.getElementById("startScreen"),
+  menu: document.getElementById("menuScreen"),
+  games: document.getElementById("gamesScreen"),
+  bet: document.getElementById("betScreen"),
+  upgrade: document.getElementById("upgradeScreen"),
+  shop: document.getElementById("shopScreen")
+};
+
+// SAFE SCREEN SWITCH
+function show(name){
+  Object.values(screens).forEach(s => s.classList.add("hidden"));
+  if (screens[name]) screens[name].classList.remove("hidden");
+}
+
 // DATA
 let data = JSON.parse(localStorage.getItem("retroSave")) || {
   coins:0,
@@ -126,87 +142,68 @@ if(!data.user){
   data.user = prompt("Enter username");
 }
 
-// ELEMENTS
-const screens = {
-  start:startScreen,
-  menu:menuScreen,
-  games:gamesScreen,
-  bet:betScreen,
-  upgrade:upgradeScreen,
-  shop:shopScreen
-};
-
-function show(name){
-  Object.values(screens).forEach(s=>s.classList.add("hidden"));
-  screens[name].classList.remove("hidden");
-}
-
-// SAVE
+// SAVE SYSTEM
 function save(){
   localStorage.setItem("retroSave", JSON.stringify(data));
-  coins.innerText = data.coins;
-  lvl.innerText = data.lvl;
-  user.innerText = data.user;
+  document.getElementById("coins").innerText = data.coins;
+  document.getElementById("lvl").innerText = data.lvl;
+  document.getElementById("user").innerText = data.user;
 }
 
-// NAV
-function startGame(){
-  show("menu");
-  save();
-}
+// NAVIGATION
+function startGame(){ show("menu"); save(); }
+function openGames(){ show("games"); }
+function openUpgrades(){ show("upgrade"); }
+function openShop(){ show("shop"); }
+function backMenu(){ show("menu"); }
+function backGames(){ show("games"); }
+function openBet(){ show("bet"); }
 
-function openGames(){show("games")}
-function openUpgrades(){show("upgrade")}
-function openShop(){show("shop")}
-function backMenu(){show("menu")}
-function backGames(){show("games")}
-function openBet(){show("bet")}
-
-// DASH GAME
+// DASH
 function startDash(){
-  show("start"); // hide UI
-  let reward = Math.floor(Math.random()*50*data.boost)+10;
+  show(null);
   setTimeout(()=>{
-    alert("Dash finished +" + reward);
+    let reward = Math.floor(Math.random()*50*data.boost)+10;
+    alert("Dash +" + reward);
     data.coins += reward;
     data.lvl++;
     save();
     show("menu");
-  },1500);
+  },1000);
 }
 
-// BET GAME
+// BET
 function bet(choice){
-  show("start");
-  let win = Math.floor(Math.random()*4);
+  show(null);
   setTimeout(()=>{
+    let win = Math.floor(Math.random()*4);
     if(choice===win){
       let reward = 100*data.luck;
       alert("WIN +" + reward);
       data.coins += reward;
-    }else{
+    } else {
       alert("LOSE");
     }
     save();
     show("menu");
-  },1500);
+  },1000);
 }
 
 // SOCCER
 function startSoccer(){
-  show("start");
-  let win = Math.random()>0.5;
+  show(null);
   setTimeout(()=>{
+    let win = Math.random()>0.5;
     if(win){
       let reward = 80*data.boost;
       alert("GOAL +" + reward);
       data.coins += reward;
-    }else{
+    } else {
       alert("MISSED");
     }
     save();
     show("menu");
-  },1500);
+  },1000);
 }
 
 // UPGRADES
@@ -214,7 +211,7 @@ function upgradeCoins(){
   if(data.coins>=50){
     data.coins-=50;
     data.boost+=0.5;
-    alert("BOOST UPGRADED");
+    alert("BOOST UP");
     save();
   }
 }
@@ -223,7 +220,7 @@ function upgradeLuck(){
   if(data.coins>=75){
     data.coins-=75;
     data.luck+=0.5;
-    alert("LUCK UPGRADED");
+    alert("LUCK UP");
     save();
   }
 }
@@ -238,7 +235,7 @@ function buyBoost(){
   }
 }
 
-// INIT
+// INIT (THIS FIXES YOUR START BUG)
 show("start");
 save();
 
