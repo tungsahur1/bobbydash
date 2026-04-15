@@ -2,106 +2,83 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Retro Casino 4.0 FINAL</title>
+<title>Retro Casino 5.1</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
 <style>
 body{
-  margin:0;
-  font-family:'Press Start 2P';
-  background:linear-gradient(135deg,#000428,#004e92);
-  color:#0ff;
-  overflow:hidden;
+margin:0;
+font-family:'Press Start 2P';
+background:#0b0b0b;
+color:#0ff;
+overflow:hidden;
 }
 
 .screen{
-  position:absolute;
-  width:100%;
-  height:100%;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  flex-direction:column;
-  z-index:2;
+position:absolute;
+width:100%;
+height:100%;
+display:flex;
+justify-content:center;
+align-items:center;
+flex-direction:column;
+z-index:2;
 }
 
 .hidden{display:none}
 
 button{
-  padding:25px;
-  margin:15px;
-  font-size:16px;
-  background:black;
-  color:#0ff;
-  border:4px solid #0ff;
-  cursor:pointer;
-  transition:0.2s;
+padding:25px;
+margin:15px;
+font-size:16px;
+background:black;
+color:#0ff;
+border:4px solid #0ff;
+cursor:pointer;
+transition:0.2s;
 }
 button:hover{transform:scale(1.1)}
 
-#patch{
-  position:absolute;
-  bottom:20px;
-  font-size:10px;
-  text-align:center;
+canvas{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+z-index:0;
 }
 
 #topUI{position:absolute;top:10px;left:10px;z-index:3}
 #bottomUI{position:absolute;bottom:10px;left:10px;z-index:3}
-
-canvas{
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  pointer-events:none;
-  z-index:0;
-}
 </style>
 </head>
 <body>
 
-<!-- START -->
 <div id="startScreen" class="screen">
 <h1>RETRO CASINO</h1>
 <button onclick="startGame()">START</button>
 </div>
 
-<!-- MENU -->
 <div id="menuScreen" class="screen hidden">
 <button onclick="openGames()">PLAY</button>
 <button onclick="openUpgrades()">UPGRADES</button>
 <button onclick="openShop()">SHOP</button>
-
-<div id="patch">
-PATCH 4.0<br>
-• 3v3 Soccer<br>
-• Football Mode<br>
-• Dash Hard Mode<br>
-• XP Orbs<br>
-• Team Editor
-</div>
 </div>
 
-<!-- GAMES -->
 <div id="gamesScreen" class="screen hidden">
-<button onclick="startDash()">DASH</button>
-<button onclick="startFootball()">FOOTBALL</button>
 <button onclick="startSoccer()">SOCCER</button>
+<button onclick="startFootball()">FOOTBALL</button>
 <button onclick="backMenu()">BACK</button>
 </div>
 
-<!-- UPGRADES -->
 <div id="upgradeScreen" class="screen hidden">
-<button onclick="upgradeCoins()">COIN BOOST</button>
-<button onclick="editTeam()">SOCCER TEAM</button>
+<button onclick="editTeam()">TEAM EDITOR</button>
 <button onclick="backMenu()">BACK</button>
 </div>
 
-<!-- SHOP -->
 <div id="shopScreen" class="screen hidden">
 <button onclick="riskUpgrade()">RISK MODE (60)</button>
+<p style="font-size:10px;">Win MORE coins, lose MORE coins</p>
 <button onclick="backMenu()">BACK</button>
 </div>
 
@@ -112,15 +89,24 @@ PATCH 4.0<br>
 
 <script>
 
-// ===== DATA =====
+// DATA
 let data = JSON.parse(localStorage.getItem("retroSave")) || {
-coins:0,lvl:1,user:null,risk:false
+coins:0,lvl:1,user:null,risk:false,
+team:"barcelona",
+goalsToWin:3
 };
 
 if(!data.user) data.user = prompt("Username");
 
-// ===== SCREENS =====
-const screens = {
+// TEAM COLORS
+const teamColors={
+barcelona:["#a50044","#004d98"],
+madrid:["#ffffff","#ccc"],
+arsenal:["#ef0107","#fff"]
+};
+
+// SCREENS
+const screens={
 start:startScreen,
 menu:menuScreen,
 games:gamesScreen,
@@ -133,7 +119,7 @@ Object.values(screens).forEach(s=>s.classList.add("hidden"));
 if(screens[name]) screens[name].classList.remove("hidden");
 }
 
-// ===== SAVE =====
+// SAVE
 function save(){
 localStorage.setItem("retroSave",JSON.stringify(data));
 coins.innerText=data.coins;
@@ -141,14 +127,14 @@ lvl.innerText=data.lvl;
 user.innerText=data.user;
 }
 
-// ===== NAV =====
+// NAV
 function startGame(){show("menu");save()}
 function openGames(){show("games")}
 function openUpgrades(){show("upgrade")}
 function openShop(){show("shop")}
 function backMenu(){show("menu")}
 
-// ===== CANVAS CORE FIX =====
+// CANVAS
 const c=document.getElementById("game");
 const ctx=c.getContext("2d");
 
@@ -173,8 +159,31 @@ document.onmousemove=null;
 clearCanvas();
 }
 
-// ===== XP ORBS =====
-function xpOrbs(){
+// DRAW FULL BODY PLAYER
+function drawPlayer(p,colors){
+ctx.fillStyle=colors[0];
+ctx.fillRect(p.x,p.y,20,30); // body
+
+ctx.fillStyle=colors[1];
+ctx.fillRect(p.x,p.y+30,20,10); // legs
+
+ctx.fillStyle="#fff";
+ctx.fillRect(p.x+5,p.y-10,10,10); // head
+}
+
+// TEAM EDITOR
+function editTeam(){
+let t=prompt("Team: barcelona / madrid / arsenal",data.team);
+if(t) data.team=t;
+
+let g=prompt("Goals to win?",data.goalsToWin);
+if(g) data.goalsToWin=parseInt(g);
+
+save();
+}
+
+// XP ORBS
+function xp(){
 let orbs=[];
 for(let i=0;i<10;i++){
 orbs.push({x:Math.random()*c.width,y:Math.random()*c.height});
@@ -195,63 +204,24 @@ ctx.fill();
 setTimeout(()=>clearInterval(anim),1000);
 }
 
-// ===== DASH =====
-function startDash(){
-stopGame();
-show("");
-
-let x=0;
-let spikes=[];
-
-loop=setInterval(()=>{
-clearCanvas();
-
-ctx.fillStyle="#111";
-ctx.fillRect(0,0,c.width,c.height);
-
-x+=10;
-
-ctx.fillStyle="white";
-ctx.fillRect(x,300,50,50);
-
-if(Math.random()<0.06){
-spikes.push({x:c.width});
-}
-
-ctx.fillStyle="red";
-spikes.forEach(s=>{
-s.x-=12;
-ctx.fillRect(s.x,300,40,40);
-
-if(Math.abs(s.x-x)<40){
-endDash();
-}
-});
-},30);
-}
-
-function endDash(){
-stopGame();
-data.coins+=50;
-data.lvl++;
-xpOrbs();
-save();
-show("games");
-}
-
-// ===== SOCCER (3v3 + AIM) =====
+// SOCCER
 function startSoccer(){
 stopGame();
 show("");
 
+let team=teamColors[data.team];
+
 let players=[
 {x:200,y:200},{x:200,y:350},{x:200,y:500}
 ];
+
 let enemies=[
 {x:c.width-200,y:200},{x:c.width-200,y:350},{x:c.width-200,y:500}
 ];
-let ball={x:c.width/2,y:c.height/2};
 
+let ball={x:c.width/2,y:c.height/2};
+let current=0;
+let score=0,enemyScore=0;
 let aim={x:0,y:0};
 
 // countdown
@@ -272,19 +242,20 @@ function startLoop(){
 loop=setInterval(()=>{
 clearCanvas();
 
+// field
 ctx.fillStyle="green";
 ctx.fillRect(0,0,c.width,c.height);
 
+// goals
+ctx.fillStyle="white";
+ctx.fillRect(20,c.height/2-120,20,240);
+ctx.fillRect(c.width-40,c.height/2-120,20,240);
+
 // crowd
-for(let i=0;i<100;i++){
+for(let i=0;i<80;i++){
 ctx.fillStyle="gray";
 ctx.fillRect(Math.random()*c.width,Math.random()*80,2,10);
 }
-
-// goals
-ctx.fillStyle="white";
-ctx.fillRect(20,c.height/2-100,10,200);
-ctx.fillRect(c.width-30,c.height/2-100,10,200);
 
 // ball
 ctx.fillStyle="white";
@@ -293,84 +264,117 @@ ctx.arc(ball.x,ball.y,10,0,6.28);
 ctx.fill();
 
 // players
-ctx.fillStyle="blue";
-players.forEach(p=>ctx.fillRect(p.x,p.y,20,20));
+players.forEach(p=>drawPlayer(p,team));
 
-ctx.fillStyle="red";
+// enemies
 enemies.forEach(e=>{
-e.x+=Math.random()*4-2;
-e.y+=Math.random()*4-2;
-ctx.fillRect(e.x,e.y,20,20);
+drawPlayer(e,["red","#fff"]);
 
-if(Math.abs(e.x-ball.x)<20){
+// AI chase ball
+let dx=ball.x-e.x;
+let dy=ball.y-e.y;
+e.x+=dx*0.02;
+e.y+=dy*0.02;
+
+if(Math.abs(e.x-ball.x)<25){
 ball.x-=4;
 }
 });
 
-// player control
-if(Math.abs(players[0].x-ball.x)<20){
-ball.x+=4;
+// BALL LOCK
+let p=players[current];
+if(Math.abs(p.x-ball.x)<30){
+ball.x=p.x+10;
+ball.y=p.y;
 }
 
-// aiming arrow
+// AIM
 ctx.strokeStyle="yellow";
 ctx.beginPath();
-ctx.moveTo(players[0].x,players[0].y);
+ctx.moveTo(p.x,p.y);
 ctx.lineTo(aim.x,aim.y);
 ctx.stroke();
 
-// scoring
-if(ball.x>c.width-40) endSoccer(true);
-if(ball.x<40) endSoccer(false);
+// GOALS
+if(ball.x>c.width-50){
+score++;
+explode(players.concat(enemies));
+reset();
+}
+if(ball.x<50){
+enemyScore++;
+explode(players.concat(enemies));
+reset();
+}
+
+if(score>=data.goalsToWin || enemyScore>=data.goalsToWin){
+endSoccer(score>enemyScore);
+}
 
 },30);
 
+// movement
 document.onkeydown=e=>{
-if(e.key==="ArrowUp")players[0].y-=10;
-if(e.key==="ArrowDown")players[0].y+=10;
-if(e.key==="ArrowLeft")players[0].x-=10;
-if(e.key==="ArrowRight")players[0].x+=10;
+if(e.key==="ArrowUp")players[current].y-=10;
+if(e.key==="ArrowDown")players[current].y+=10;
+if(e.key==="ArrowLeft")players[current].x-=10;
+if(e.key==="ArrowRight")players[current].x+=10;
 };
 
+// aim
 document.onmousemove=e=>{
 aim.x=e.clientX;
 aim.y=e.clientY;
 };
+
+// PASS (BIG HITBOX)
+document.onclick=()=>{
+players.forEach((p,i)=>{
+if(Math.abs(aim.x-p.x)<60 && Math.abs(aim.y-p.y)<60){
+current=i;
+ball.x=p.x;
+ball.y=p.y;
+}
+});
+};
+}
+
+function explode(all){
+all.forEach(p=>{
+p.x+=Math.random()*200-100;
+p.y+=Math.random()*200-100;
+});
+}
+
+function reset(){
+ball.x=c.width/2;
+ball.y=c.height/2;
 }
 
 function endSoccer(win){
 stopGame();
-data.coins+=win?120:20;
-xpOrbs();
+data.coins+=win?150:50;
+data.lvl++;
+xp();
 save();
 show("games");
 }
 }
 
-// ===== FOOTBALL =====
+// FOOTBALL
 function startFootball(){
 stopGame();
 show("");
 
 let p={x:100,y:c.height/2};
+let enemies=[
+{x:c.width-200,y:200},
+{x:c.width-200,y:400}
+];
+
 let ball={x:c.width/2,y:c.height/2};
 let aim={x:0,y:0};
 
-// countdown
-let count=3;
-let cd=setInterval(()=>{
-clearCanvas();
-ctx.fillStyle="white";
-ctx.font="50px Arial";
-ctx.fillText(count,c.width/2,c.height/2);
-count--;
-if(count<0){
-clearInterval(cd);
-startLoop();
-}
-},800);
-
-function startLoop(){
 loop=setInterval(()=>{
 clearCanvas();
 
@@ -381,16 +385,28 @@ ctx.fillStyle="white";
 ctx.fillRect(ball.x,ball.y,10,10);
 
 ctx.fillStyle="blue";
-ctx.fillRect(p.x,p.y,20,20);
+ctx.fillRect(p.x,p.y,30,30);
 
-// aim line
+// enemies
+enemies.forEach(e=>{
+let dx=ball.x-e.x;
+let dy=ball.y-e.y;
+e.x+=dx*0.03;
+e.y+=dy*0.03;
+
+ctx.fillStyle="red";
+ctx.fillRect(e.x,e.y,30,30);
+});
+
+// aim
 ctx.strokeStyle="yellow";
 ctx.beginPath();
 ctx.moveTo(p.x,p.y);
 ctx.lineTo(aim.x,aim.y);
 ctx.stroke();
 
-if(Math.abs(p.x-ball.x)<20){
+// control
+if(Math.abs(p.x-ball.x)<30){
 ball.x+=10;
 }
 
@@ -418,30 +434,17 @@ stopGame();
 let reward=win?150:50;
 if(data.risk) reward*=2;
 data.coins+=reward;
-xpOrbs();
+xp();
 save();
 show("games");
 }
-}
 
-// ===== UPGRADES =====
-function upgradeCoins(){
-if(data.coins>=50){
-data.coins-=50;
-save();
-}
-}
-
-function editTeam(){
-alert("TEAM EDITOR COMING NEXT UPDATE");
-}
-
-// ===== SHOP =====
+// SHOP
 function riskUpgrade(){
 if(data.coins>=60){
 data.coins-=60;
 data.risk=true;
-alert("HIGH RISK ENABLED");
+alert("Risk Mode Enabled");
 save();
 }
 }
