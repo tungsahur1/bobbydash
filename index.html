@@ -2,18 +2,11 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Retro Casino 1.05</title>
+<title>Retro Casino FINAL 1.06</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-body{
-  margin:0;
-  background:black;
-  color:#0ff;
-  font-family:'Press Start 2P';
-  overflow:hidden;
-}
+body{margin:0;background:black;color:#0ff;font-family:'Press Start 2P';overflow:hidden}
 
-/* 🔥 FIXED CANVAS */
 canvas{
   position:absolute;
   top:0;
@@ -36,7 +29,7 @@ button{
 
 .hidden{display:none}
 
-#startScreen{
+.screen{
   position:absolute;
   width:100%;
   height:100%;
@@ -44,46 +37,42 @@ button{
   flex-direction:column;
   justify-content:center;
   align-items:center;
-  background:linear-gradient(#020024,#090979,#00d4ff);
   z-index:2;
 }
 
-#menuScreen{
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  z-index:2;
-}
+#startScreen{background:linear-gradient(#020024,#090979,#00d4ff)}
+#menuScreen{background:#000}
+#betScreen{background:#000}
 
-#ui{position:absolute;top:10px;left:10px;z-index:2}
-#bottomBar{position:absolute;bottom:10px;left:10px;color:#fff;z-index:2}
+#ui{position:absolute;top:10px;left:10px;z-index:3}
+#bottomBar{position:absolute;bottom:10px;left:10px;color:#fff;z-index:3}
 
 </style>
 </head>
 <body>
 
-<div id="startScreen">
+<div id="startScreen" class="screen">
 <h1>RETRO CASINO</h1>
 <button id="startBtn">START</button>
 </div>
 
-<div id="ui" class="hidden">🪙 <span id="coins">0</span></div>
-<div id="bottomBar" class="hidden"><span id="user"></span> | LVL <span id="lvl"></span> | XP <span id="xp"></span></div>
-
-<div id="menuScreen" class="hidden">
+<div id="menuScreen" class="screen hidden">
 <button id="dashBtn">DASH RUN</button>
 <button id="betBtn">RETRO BALL</button>
 <button id="soccerBtn">SOCCER</button>
 </div>
 
-<div id="betScreen" class="hidden">
-<h3 style="color:white">BET ON A TEAM</h3>
+<div id="betScreen" class="screen hidden">
+<h3>BET ON A TEAM</h3>
 <button data-team="0">RED</button>
 <button data-team="1">BLUE</button>
 <button data-team="2">GREEN</button>
 <button data-team="3">YELLOW</button>
+<button id="backBtn">BACK</button>
 </div>
+
+<div id="ui" class="hidden">🪙 <span id="coins">0</span></div>
+<div id="bottomBar" class="hidden"><span id="user"></span> | LVL <span id="lvl"></span> | XP <span id="xp"></span></div>
 
 <canvas id="game"></canvas>
 
@@ -92,17 +81,23 @@ button{
 let data=JSON.parse(localStorage.getItem('retroUltra'))||{coins:0,xp:0,lvl:1,user:null};
 if(!data.user){data.user=prompt('ENTER USERNAME');}
 
-const startBtn=document.getElementById('startBtn');
-const startScreen=document.getElementById('startScreen');
-const menuScreen=document.getElementById('menuScreen');
-const betScreen=document.getElementById('betScreen');
-const ui=document.getElementById('ui');
-const bottomBar=document.getElementById('bottomBar');
+const screens={
+start:document.getElementById('startScreen'),
+menu:document.getElementById('menuScreen'),
+bet:document.getElementById('betScreen')
+};
+
+function show(screen){
+Object.values(screens).forEach(s=>s.classList.add('hidden'));
+screens[screen].classList.remove('hidden');
+}
 
 const coinsEl=document.getElementById('coins');
 const xpEl=document.getElementById('xp');
 const lvlEl=document.getElementById('lvl');
 const userEl=document.getElementById('user');
+const ui=document.getElementById('ui');
+const bottomBar=document.getElementById('bottomBar');
 
 const c=document.getElementById('game');
 const ctx=c.getContext('2d');
@@ -118,11 +113,7 @@ lvlEl.innerText=data.lvl;
 userEl.innerText=data.user;
 }
 
-function gainXP(n){
-data.xp+=n;
-if(data.xp>=data.lvl*100){data.xp=0;data.lvl++;}
-}
-
+function gainXP(n){data.xp+=n;if(data.xp>=data.lvl*100){data.xp=0;data.lvl++;}}
 function clear(){ctx.fillStyle='#111';ctx.fillRect(0,0,c.width,c.height)}
 
 let loop;
@@ -130,8 +121,7 @@ function stop(){clearInterval(loop);document.onkeydown=null}
 
 // START
 startBtn.onclick=()=>{
-startScreen.classList.add('hidden');
-menuScreen.classList.remove('hidden');
+show('menu');
 ui.classList.remove('hidden');
 bottomBar.classList.remove('hidden');
 save();
@@ -140,18 +130,15 @@ save();
 // DASH
 function dash(){
 stop();
-menuScreen.classList.add('hidden');
+show(null);
 let x=150,y=c.height-200,vy=0,spikes=[];
 loop=setInterval(()=>{
 clear();
 vy+=1;y+=vy;
 if(y>c.height-200){y=c.height-200;vy=0}
-
 ctx.fillStyle='white';
 ctx.fillRect(x,y,40,40);
-
 if(Math.random()<0.04)spikes.push({x:c.width,y:c.height-200});
-
 ctx.fillStyle='magenta';
 spikes.forEach(s=>{
 s.x-=12;
@@ -160,111 +147,63 @@ ctx.moveTo(s.x,s.y+40);
 ctx.lineTo(s.x+20,s.y);
 ctx.lineTo(s.x+40,s.y+40);
 ctx.fill();
-
 if(s.x<x+40&&s.x+40>x&&y>c.height-230){endDash();}
 });
 },30);
-
-document.onkeydown=e=>{
-if(e.key==='ArrowUp'&&y===c.height-200)vy=-20;
+document.onkeydown=e=>{if(e.key==='ArrowUp'&&y===c.height-200)vy=-20};
 }
-}
-
-function endDash(){
-stop();
-let r=50+Math.random()*50;
-data.coins+=Math.floor(r);
-gainXP(20);
-alert('CRASH +'+Math.floor(r));
-save();
-menuScreen.classList.remove('hidden');
-}
+function endDash(){stop();data.coins+=60;gainXP(20);alert('CRASH +60');save();show('menu');}
 
 // BET
 function startBet(choice){
 stop();
-betScreen.classList.add('hidden');
+show(null);
 let players=[0,0,0,0];
 loop=setInterval(()=>{
 clear();
 players=players.map(p=>p+Math.random()*8);
-
-players.forEach((p,i)=>{
-ctx.fillStyle=['red','blue','green','yellow'][i];
-ctx.fillRect(p,100+i*100,60,40);
-});
-
+players.forEach((p,i)=>{ctx.fillStyle=['red','blue','green','yellow'][i];ctx.fillRect(p,100+i*100,60,40);});
 let win=players.indexOf(Math.max(...players));
-if(players[win]>c.width-120){
-stop();
-if(win===choice){
-data.coins+=100;gainXP(30);alert('WIN +100');
-}else alert('LOSE');
-
-save();
-menuScreen.classList.remove('hidden');
-}
+if(players[win]>c.width-120){stop();
+if(win===choice){data.coins+=100;gainXP(30);alert('WIN')}else alert('LOSE');
+save();show('menu');}
 },30);
 }
 
 // SOCCER
 function soccer(){
 stop();
-menuScreen.classList.add('hidden');
+show(null);
 let p={x:60,y:c.height/2};
 let defs=[{x:c.width/2,y:150},{x:c.width/2,y:350}];
-
 loop=setInterval(()=>{
 clear();
-ctx.fillStyle='white';
-ctx.fillRect(c.width-60,c.height/2-80,10,160);
-
-ctx.fillStyle='yellow';
-ctx.fillRect(p.x,p.y,20,40);
-
+ctx.fillStyle='white';ctx.fillRect(c.width-60,c.height/2-80,10,160);
+ctx.fillStyle='yellow';ctx.fillRect(p.x,p.y,20,40);
 ctx.fillStyle='red';
 defs.forEach(d=>{
 d.y+=Math.random()*8-4;
 ctx.fillRect(d.x,d.y,20,40);
-
-if(Math.abs(p.x-d.x)<25&&Math.abs(p.y-d.y)<40){endSoccer(false)}
-});
-
+if(Math.abs(p.x-d.x)<25&&Math.abs(p.y-d.y)<40){endSoccer(false)}});
 if(p.x>c.width-70){endSoccer(true)}
 },30);
-
 document.onkeydown=e=>{
 if(e.key==='ArrowUp')p.y-=12;
 if(e.key==='ArrowDown')p.y+=12;
 if(e.key==='ArrowLeft')p.x-=12;
 if(e.key==='ArrowRight')p.x+=12;
+};
 }
-}
-
-function endSoccer(win){
-stop();
-if(win){
-let r=80+Math.random()*40;
-data.coins+=Math.floor(r);
-gainXP(40);
-alert('GOAL +'+Math.floor(r));
-}else alert('TACKLED');
-
-save();
-menuScreen.classList.remove('hidden');
-}
+function endSoccer(win){stop();if(win){data.coins+=100;gainXP(40);alert('GOAL')}else alert('TACKLED');save();show('menu');}
 
 // BUTTONS
+
 document.getElementById('dashBtn').onclick=dash;
-
-document.getElementById('betBtn').onclick=()=>{
-menuScreen.classList.add('hidden');
-betScreen.classList.remove('hidden');
-}
-
+document.getElementById('betBtn').onclick=()=>show('bet');
 document.getElementById('soccerBtn').onclick=soccer;
+document.getElementById('backBtn').onclick=()=>show('menu');
 
-document.querySelectorAll('#betScreen button').forEach(btn=>{
+document.querySelectorAll('#betScreen button[data-team]').forEach(btn=>{
 btn.onclick=()=>startBet(Number(btn.dataset.team));
 });
 
