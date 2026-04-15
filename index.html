@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retro Casino</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#000;color:#00ffcc;font-family:'Press Start 2P',cursive;overflow:hidden}
+.hidden{display:none}
+button{font-family:'Press Start 2P';background:#000;color:#00ffcc;border:2px solid #00ffcc;padding:10px;margin:8px;cursor:pointer}
+#startBtn{animation:pulse 1s infinite alternate}
+@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.12)}}
+#topBar{position:fixed;top:10px;left:10px;z-index:10}
+#coin{width:40px;height:40px;background:gold;border-radius:50%;display:inline-block;animation:spin 2s linear infinite;margin-right:5px}
+@keyframes spin{from{transform:rotateY(0)}to{transform:rotateY(360deg)}}
+.container{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+canvas{background:#111;border:2px solid #00ffcc}
+.team{width:80px;height:40px;display:inline-block;margin:5px}
+</style>
+</head>
+<body>
+
+<div id="topBar" class="hidden">
+<button onclick="goBack()">←</button>
+<span id="coin"></span><span id="coins">0</span>
+</div>
+
+<div id="startScreen" class="container">
+<h1>RETRO CASINO</h1>
+<button id="startBtn" onclick="showUsername()">START</button>
+</div>
+
+<div id="usernameScreen" class="container hidden">
+<p>ENTER USERNAME</p>
+<input id="usernameInput"><br>
+<button onclick="saveUsername()">NEXT</button>
+</div>
+
+<div id="mainMenu" class="container hidden">
+<button onclick="openPlay()">PLAY</button>
+<button onclick="openUpgrades()">UPGRADES</button>
+<button onclick="openShop()">SHOP</button>
+</div>
+
+<div id="playMenu" class="container hidden">
+<h2>SELECT MODE</h2>
+<button onclick="startGD()">DASH RUN</button>
+<button onclick="openRetroBall()">RETRO BALL</button>
+<button onclick="startSoccer()">SOCCER</button>
+</div>
+
+<div id="retroBallMenu" class="container hidden">
+<h3>BET ON A TEAM</h3>
+<div class="team" style="background:red" onclick="bet(0)"></div>
+<div class="team" style="background:blue" onclick="bet(1)"></div>
+<div class="team" style="background:green" onclick="bet(2)"></div>
+<div class="team" style="background:yellow" onclick="bet(3)"></div>
+</div>
+
+<div id="upgradesMenu" class="container hidden">
+<h3>UPGRADES</h3>
+<button onclick="upgrade('mult')">COIN MULTI</button>
+<button onclick="upgrade('difficulty')">EASY MODE</button>
+<button onclick="upgrade('shop')">SHOP LVL</button>
+</div>
+
+<div id="shopMenu" class="container hidden">
+<h3>SHOP</h3>
+<button onclick="buy('team')">TEAM BOOST</button>
+<button onclick="buy('luck')">BET LUCK</button>
+<button onclick="buy('dash')">HARD LEVELS</button>
+</div>
+
+<canvas id="gameCanvas" width="400" height="300" class="hidden"></canvas>
+
+<script>
+let data = JSON.parse(localStorage.getItem('retroCasino')) || {coins:0,mult:1,difficulty:1,shop:1,luck:0};
+let canvas = document.getElementById('gameCanvas');
+let ctx = canvas.getContext('2d');
+let gameInterval;
+
+function save(){localStorage.setItem('retroCasino',JSON.stringify(data));coins.innerText=data.coins}
+
+function hideAll(){document.querySelectorAll('.container, canvas').forEach(e=>e.classList.add('hidden'))}
+function goBack(){clearInterval(gameInterval);canvas.classList.add('hidden');openMain()}
+
+function showUsername(){hideAll();usernameScreen.classList.remove('hidden')}
+function saveUsername(){data.username=usernameInput.value;save();openMain()}
+function openMain(){hideAll();topBar.classList.remove('hidden');mainMenu.classList.remove('hidden')}
+function openPlay(){hideAll();playMenu.classList.remove('hidden')}
+function openUpgrades(){hideAll();upgradesMenu.classList.remove('hidden')}
+function openShop(){hideAll();shopMenu.classList.remove('hidden')}
+function openRetroBall(){hideAll();retroBallMenu.classList.remove('hidden')}
+
+// DASH GAME
+function startGD(){hideAll();canvas.classList.remove('hidden');let x=50,y=200,vy=0;let obstacles=[];
+clearInterval(gameInterval);
+gameInterval=setInterval(()=>{
+ctx.clearRect(0,0,400,300);
+vy+=1;y+=vy;
+if(y>200){y=200;vy=0}
+ctx.fillStyle='#0ff';ctx.fillRect(x,y,20,20);
+if(Math.random()<0.02)data.difficulty>1&&obstacles.push({x:400,y:200});
+obstacles.forEach(o=>{o.x-=5;ctx.fillRect(o.x,o.y,20,20);
+if(o.x<x+20&&o.x+20>x&&y<220){endGD()}});
+},30);
+document.onkeydown=e=>{if(e.key==='ArrowUp'&&y===200)vy=-12};
+}
+function endGD(){clearInterval(gameInterval);let reward=Math.floor(Math.random()*100)+1;data.coins+=reward*data.mult;alert('CRASH! +'+reward);save();goBack()}
+
+// RETRO BALL
+function bet(team){let winner=Math.floor(Math.random()*4);
+if(team===winner||Math.random()<data.luck*0.1){let win=80;data.coins+=win;alert('WIN +'+win)}else alert('LOSE');
+save();goBack()}
+
+// SOCCER GAME
+function startSoccer(){hideAll();canvas.classList.remove('hidden');let px=20,py=150;let defenders=[{x:200,y:150}];
+clearInterval(gameInterval);
+gameInterval=setInterval(()=>{
+ctx.clearRect(0,0,400,300);
+ctx.fillStyle='white';ctx.fillRect(380,120,10,60);
+ctx.fillStyle='#0f0';ctx.fillRect(px,py,15,15);
+defenders.forEach(d=>{d.y+=Math.random()*6-3;ctx.fillRect(d.x,d.y,15,15);
+if(px<d.x+15&&px+15>d.x&&py<d.y+15){endSoccer(false)}});
+if(px>380){endSoccer(true)}
+},30);
+document.onkeydown=e=>{
+if(e.key==='ArrowUp')py-=10;
+if(e.key==='ArrowDown')py+=10;
+if(e.key==='ArrowRight')px+=10;
+if(e.key==='ArrowLeft')px-=10;
+};}
+function endSoccer(win){clearInterval(gameInterval);
+if(win){let r=Math.floor(Math.random()*25)+75;data.coins+=r;alert('GOAL +'+r)}
+else alert('TACKLED');
+save();goBack()}
+
+// UPGRADES
+function upgrade(type){if(data.coins<50)return alert('NO COINS');data.coins-=50;data[type]++;save()}
+
+// SHOP
+function buy(type){if(data.coins<100)return alert('NO COINS');data.coins-=100;
+if(type==='luck')data.luck++;
+save()}
+
+save();
+</script>
+
+</body>
+</html>
