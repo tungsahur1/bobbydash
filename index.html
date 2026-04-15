@@ -2,14 +2,14 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Retro Casino 4.0</title>
+<title>Retro Casino 4.0 FIXED</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
 <style>
 body{
   margin:0;
   font-family:'Press Start 2P';
-  background:#000;
+  background:black;
   color:#0ff;
   overflow:hidden;
 }
@@ -20,9 +20,9 @@ body{
   width:100%;
   height:100%;
   display:flex;
-  flex-direction:column;
   justify-content:center;
   align-items:center;
+  flex-direction:column;
   z-index:2;
 }
 
@@ -39,14 +39,13 @@ button{
   cursor:pointer;
   transition:0.2s;
 }
-
 button:hover{transform:scale(1.1)}
 
 /* UI */
 #topUI{position:absolute;top:10px;left:10px;z-index:3}
 #bottomUI{position:absolute;bottom:10px;left:10px;z-index:3}
 
-/* CANVAS FIXED */
+/* CANVAS (IMPORTANT FIX) */
 canvas{
   position:absolute;
   top:0;
@@ -76,8 +75,8 @@ canvas{
 <!-- GAMES -->
 <div id="gamesScreen" class="screen hidden">
 <button onclick="startDash()">DASH</button>
-<button onclick="startFootball()">FOOTBALL</button>
 <button onclick="startSoccer()">SOCCER</button>
+<button onclick="startFootball()">FOOTBALL</button>
 <button onclick="backMenu()">BACK</button>
 </div>
 
@@ -103,34 +102,41 @@ canvas{
 
 // ===== DATA =====
 let data = JSON.parse(localStorage.getItem("retroSave")) || {
-coins:0,lvl:1,user:null,risk:false
+  coins:0,
+  lvl:1,
+  user:null,
+  risk:false
 };
 
-if(!data.user) data.user = prompt("Username");
+if(!data.user){
+  data.user = prompt("Enter Username");
+}
 
-// ===== SCREENS =====
+// ===== SCREENS (WORKING SYSTEM) =====
 const screens = {
-start: document.getElementById("startScreen"),
-menu: document.getElementById("menuScreen"),
-games: document.getElementById("gamesScreen"),
-upgrade: document.getElementById("upgradeScreen"),
-shop: document.getElementById("shopScreen")
+  start: document.getElementById("startScreen"),
+  menu: document.getElementById("menuScreen"),
+  games: document.getElementById("gamesScreen"),
+  upgrade: document.getElementById("upgradeScreen"),
+  shop: document.getElementById("shopScreen")
 };
 
 function show(name){
-  Object.values(screens).forEach(s=>s.classList.add("hidden"));
-  if(name && screens[name]) screens[name].classList.remove("hidden");
+  Object.values(screens).forEach(s => s.classList.add("hidden"));
+  if (screens[name]) {
+    screens[name].classList.remove("hidden");
+  }
 }
 
 // ===== SAVE =====
 function save(){
   localStorage.setItem("retroSave", JSON.stringify(data));
-  coins.innerText=data.coins;
-  lvl.innerText=data.lvl;
-  user.innerText=data.user;
+  coins.innerText = data.coins;
+  lvl.innerText = data.lvl;
+  user.innerText = data.user;
 }
 
-// ===== NAV =====
+// ===== NAV (WORKING) =====
 function startGame(){ show("menu"); save(); }
 function openGames(){ show("games"); }
 function openUpgrades(){ show("upgrade"); }
@@ -138,18 +144,18 @@ function openShop(){ show("shop"); }
 function backMenu(){ show("menu"); }
 
 // ===== CANVAS =====
-const c=document.getElementById("game");
-const ctx=c.getContext("2d");
+const c = document.getElementById("game");
+const ctx = c.getContext("2d");
 
 function resize(){
-  c.width=window.innerWidth;
-  c.height=window.innerHeight;
+  c.width = window.innerWidth;
+  c.height = window.innerHeight;
 }
 resize();
-window.onresize=resize;
+window.onresize = resize;
 
 // ===== CORE FIX =====
-let loop=null;
+let loop = null;
 
 function clearCanvas(){
   ctx.clearRect(0,0,c.width,c.height);
@@ -157,32 +163,34 @@ function clearCanvas(){
 
 function stopGame(){
   if(loop) clearInterval(loop);
-  loop=null;
-  document.onkeydown=null;
-  clearCanvas(); // 🔥 THIS FIXES WHITE SCREEN
+  loop = null;
+  document.onkeydown = null;
+  clearCanvas(); // FIXES WHITE SCREEN
 }
 
-// ===== DASH =====
+// ================= DASH =================
 function startDash(){
   stopGame();
-  show();
+  show(""); // hides UI safely
 
-  let y=c.height-150,vy=0;
-  let spikes=[];
+  let y = c.height-150, vy=0;
+  let spikes = [];
 
-  loop=setInterval(()=>{
+  loop = setInterval(()=>{
     clearCanvas();
 
     ctx.fillStyle="#111";
     ctx.fillRect(0,0,c.width,c.height);
 
-    vy+=1;y+=vy;
-    if(y>c.height-150){y=c.height-150;vy=0}
+    vy+=1; y+=vy;
+    if(y>c.height-150){ y=c.height-150; vy=0 }
 
     ctx.fillStyle="white";
     ctx.fillRect(200,y,50,50);
 
-    if(Math.random()<0.05) spikes.push({x:c.width});
+    if(Math.random()<0.05){
+      spikes.push({x:c.width});
+    }
 
     ctx.fillStyle="red";
     spikes.forEach(s=>{
@@ -196,28 +204,30 @@ function startDash(){
 
   },30);
 
-  document.onkeydown=e=>{
-    if(e.key==="ArrowUp" && y===c.height-150) vy=-20;
+  document.onkeydown = e=>{
+    if(e.key==="ArrowUp" && y===c.height-150){
+      vy=-20;
+    }
   };
 }
 
 function endDash(){
   stopGame();
-  data.coins+=50;
+  data.coins += 50;
   data.lvl++;
   save();
   show("games");
 }
 
-// ===== SOCCER =====
+// ================= SOCCER =================
 function startSoccer(){
   stopGame();
-  show();
+  show("");
 
   let p={x:100,y:c.height/2};
   let ball={x:c.width/2,y:c.height/2};
 
-  loop=setInterval(()=>{
+  loop = setInterval(()=>{
     clearCanvas();
 
     ctx.fillStyle="green";
@@ -241,30 +251,30 @@ function startSoccer(){
 
   },30);
 
-  document.onkeydown=e=>{
-    if(e.key==="ArrowUp")p.y-=10;
-    if(e.key==="ArrowDown")p.y+=10;
-    if(e.key==="ArrowLeft")p.x-=10;
-    if(e.key==="ArrowRight")p.x+=10;
+  document.onkeydown = e=>{
+    if(e.key==="ArrowUp") p.y-=10;
+    if(e.key==="ArrowDown") p.y+=10;
+    if(e.key==="ArrowLeft") p.x-=10;
+    if(e.key==="ArrowRight") p.x+=10;
   };
 }
 
 function endSoccer(){
   stopGame();
-  data.coins+=100;
+  data.coins += 100;
   save();
   show("games");
 }
 
-// ===== FOOTBALL =====
+// ================= FOOTBALL =================
 function startFootball(){
   stopGame();
-  show();
+  show("");
 
   let p={x:100,y:c.height/2};
   let ball={x:c.width/2,y:c.height/2};
 
-  loop=setInterval(()=>{
+  loop = setInterval(()=>{
     clearCanvas();
 
     ctx.fillStyle="#063";
@@ -286,24 +296,23 @@ function startFootball(){
 
   },30);
 
-  document.onkeydown=e=>{
-    if(e.key==="ArrowUp")p.y-=10;
-    if(e.key==="ArrowDown")p.y+=10;
-    if(e.key==="ArrowLeft")p.x-=10;
-    if(e.key==="ArrowRight")p.x+=10;
+  document.onkeydown = e=>{
+    if(e.key==="ArrowUp") p.y-=10;
+    if(e.key==="ArrowDown") p.y+=10;
+    if(e.key==="ArrowLeft") p.x-=10;
+    if(e.key==="ArrowRight") p.x+=10;
   };
 }
 
 function endFootball(){
   stopGame();
-  let reward=100;
-  if(data.risk) reward*=2;
-  data.coins+=reward;
+  let reward = data.risk ? 200 : 100;
+  data.coins += reward;
   save();
   show("games");
 }
 
-// ===== UPGRADES =====
+// ================= UPGRADES =================
 function upgradeCoins(){
   if(data.coins>=50){
     data.coins-=50;
@@ -311,16 +320,17 @@ function upgradeCoins(){
   }
 }
 
-// ===== SHOP =====
+// ================= SHOP =================
 function riskUpgrade(){
   if(data.coins>=60){
     data.coins-=60;
-    data.risk=true;
+    data.risk = true;
+    alert("RISK MODE ENABLED");
     save();
   }
 }
 
-// INIT
+// ===== INIT =====
 show("start");
 save();
 
