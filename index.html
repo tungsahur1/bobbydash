@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>RETRO CASINO FIXED</title>
+<title>RETRO CASINO 1.05</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
 body{margin:0;font-family:'Press Start 2P';overflow:hidden;background:black}
@@ -28,10 +28,9 @@ button{font-family:'Press Start 2P';background:#000;color:#0ff;border:3px solid 
 
 <div id="patchNotes" class="hidden">
 <h2>PATCH NOTES 1.05</h2>
-<p>- Fullscreen gameplay</p>
-<p>- Soccer players added</p>
-<p>- Dash upgraded</p>
-<p>- Betting visual</p>
+<p>- Full gameplay fixed</p>
+<p>- All buttons working</p>
+<p>- Dash, Soccer, Betting playable</p>
 <button id="closePatch">CLOSE</button>
 </div>
 
@@ -51,10 +50,10 @@ button{font-family:'Press Start 2P';background:#000;color:#0ff;border:3px solid 
 
 <div id="betScreen" class="hidden">
 <h3 style="color:white">BET ON A TEAM</h3>
-<button onclick="bet(0)">RED</button>
-<button onclick="bet(1)">BLUE</button>
-<button onclick="bet(2)">GREEN</button>
-<button onclick="bet(3)">YELLOW</button>
+<button onclick="startBet(0)">RED</button>
+<button onclick="startBet(1)">BLUE</button>
+<button onclick="startBet(2)">GREEN</button>
+<button onclick="startBet(3)">YELLOW</button>
 </div>
 
 <canvas id="game"></canvas>
@@ -68,28 +67,62 @@ const ctx=c.getContext('2d');
 function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
 resize();window.onresize=resize;
 
-function save(){localStorage.setItem('retroUltra',JSON.stringify(data));document.getElementById('coins').innerText=data.coins;document.getElementById('xp').innerText=data.xp;document.getElementById('lvl').innerText=data.lvl;document.getElementById('user').innerText=data.user}
+function save(){localStorage.setItem('retroUltra',JSON.stringify(data));coins.innerText=data.coins;xp.innerText=data.xp;lvl.innerText=data.lvl;user.innerText=data.user}
+function gainXP(n){data.xp+=n;if(data.xp>=data.lvl*100){data.xp=0;data.lvl++;}}
+function clear(){ctx.fillStyle='#111';ctx.fillRect(0,0,c.width,c.height)}
 
-function startGame(){
-document.getElementById('startScreen').classList.add('hidden');
-document.getElementById('menuScreen').classList.remove('hidden');
-document.getElementById('ui').classList.remove('hidden');
-document.getElementById('bottomBar').classList.remove('hidden');
-save();
+function startGame(){startScreen.classList.add('hidden');menuScreen.classList.remove('hidden');ui.classList.remove('hidden');bottomBar.classList.remove('hidden');save();}
+function showPatch(){patchNotes.classList.remove('hidden');}
+function hidePatch(){patchNotes.classList.add('hidden');}
+
+let loop;
+function stop(){clearInterval(loop);document.onkeydown=null}
+
+// DASH
+function dash(){stop();menuScreen.classList.add('hidden');
+let x=150,y=c.height-200,vy=0,spikes=[];
+loop=setInterval(()=>{
+clear();vy+=1;y+=vy;if(y>c.height-200){y=c.height-200;vy=0}
+ctx.fillStyle='white';ctx.fillRect(x,y,40,40);
+if(Math.random()<0.04)spikes.push({x:c.width,y:c.height-200});
+ctx.fillStyle='magenta';
+spikes.forEach(s=>{s.x-=12;ctx.beginPath();ctx.moveTo(s.x,s.y+40);ctx.lineTo(s.x+20,s.y);ctx.lineTo(s.x+40,s.y+40);ctx.fill();
+if(s.x<x+40&&s.x+40>x&&y>c.height-230){endDash()}});
+},30);
+document.onkeydown=e=>{if(e.key==='ArrowUp'&&y===c.height-200)vy=-20};}
+function endDash(){stop();let r=50+Math.random()*50;data.coins+=Math.floor(r);gainXP(20);alert('CRASH +'+Math.floor(r));save();menuScreen.classList.remove('hidden')}
+
+// BET
+function startBet(choice){stop();betScreen.classList.add('hidden');
+let players=[0,0,0,0];
+loop=setInterval(()=>{
+clear();players=players.map(p=>p+Math.random()*8);
+players.forEach((p,i)=>{ctx.fillStyle=['red','blue','green','yellow'][i];ctx.fillRect(p,100+i*100,60,40);});
+let win=players.indexOf(Math.max(...players));
+if(players[win]>c.width-120){stop();if(win===choice){data.coins+=100;gainXP(30);alert('WIN +100')}else alert('LOSE');save();menuScreen.classList.remove('hidden');}
+},30);
 }
 
-function showPatch(){document.getElementById('patchNotes').classList.remove('hidden');}
-function hidePatch(){document.getElementById('patchNotes').classList.add('hidden');}
+// SOCCER
+function soccer(){stop();menuScreen.classList.add('hidden');
+let p={x:60,y:c.height/2};let defs=[{x:c.width/2,y:150},{x:c.width/2,y:350}];
+loop=setInterval(()=>{
+clear();ctx.fillStyle='white';ctx.fillRect(c.width-60,c.height/2-80,10,160);
+ctx.fillStyle='yellow';ctx.fillRect(p.x,p.y,20,40);ctx.beginPath();ctx.arc(p.x+10,p.y-5,6,0,6.28);ctx.fill();
+ctx.fillStyle='red';defs.forEach(d=>{d.y+=Math.random()*8-4;ctx.fillRect(d.x,d.y,20,40);
+if(Math.abs(p.x-d.x)<25&&Math.abs(p.y-d.y)<40){endSoccer(false)}});
+if(p.x>c.width-70){endSoccer(true)}
+},30);
+document.onkeydown=e=>{if(e.key==='ArrowUp')p.y-=12;if(e.key==='ArrowDown')p.y+=12;if(e.key==='ArrowLeft')p.x-=12;if(e.key==='ArrowRight')p.x+=12};}
+function endSoccer(win){stop();if(win){let r=80+Math.random()*40;data.coins+=Math.floor(r);gainXP(40);alert('GOAL +'+Math.floor(r))}else alert('TACKLED');save();menuScreen.classList.remove('hidden')}
 
-// FIX: BUTTON EVENTS
-
-document.getElementById('startBtn').onclick=startGame;
-document.getElementById('patchBtn').onclick=showPatch;
-document.getElementById('closePatch').onclick=hidePatch;
-
-document.getElementById('dashBtn').onclick=()=>alert('Dash coming!');
-document.getElementById('betBtn').onclick=()=>document.getElementById('betScreen').classList.remove('hidden');
-document.getElementById('soccerBtn').onclick=()=>alert('Soccer coming!');
+// BUTTONS
+startBtn.onclick=startGame;
+patchBtn.onclick=showPatch;
+closePatch.onclick=hidePatch;
+dashBtn.onclick=dash;
+betBtn.onclick=()=>{menuScreen.classList.add('hidden');betScreen.classList.remove('hidden')};
+soccerBtn.onclick=soccer;
 
 save();
 </script>
