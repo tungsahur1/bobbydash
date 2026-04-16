@@ -1,48 +1,64 @@
-const game = document.getElementById("game");
-const ctx = game.getContext("2d");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
 function resize(){
-game.width = innerWidth;
-game.height = innerHeight;
+canvas.width = innerWidth;
+canvas.height = innerHeight;
 }
 resize();
 onresize = resize;
 
-// ===== DATA =====
-let data = JSON.parse(localStorage.getItem("retroSave")) || {
-coins:0
+/* DATA */
+let data = JSON.parse(localStorage.getItem("save")) || {
+coins:0,
+xp:0,
+lvl:1,
+speed:1,
+diff:1
 };
 
 function save(){
-localStorage.setItem("retroSave", JSON.stringify(data));
+localStorage.setItem("save", JSON.stringify(data));
 updateUI();
 }
 
 function updateUI(){
-document.getElementById("coins").innerText = data.coins;
+document.getElementById("topbar").innerText =
+`Coins: ${data.coins} | XP: ${data.xp} | LVL: ${data.lvl}`;
 }
 
-// ===== SCREEN SYSTEM =====
-function showScreen(id){
+/* SCREENS */
+function show(id){
 stopGame();
-
-document.querySelectorAll(".screen").forEach(s=>s.classList.add("hidden"));
-game.style.display = "none";
-
-if(id) document.getElementById(id).classList.remove("hidden");
+document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+document.getElementById(id).classList.add("active");
+canvas.style.display="none";
 }
 
-// ===== LOOP CONTROL =====
-let loop = null;
-let keys = {};
+/* INPUT */
+let keys={}, mouse={x:0,y:0};
+onkeydown=e=>keys[e.key.toLowerCase()]=true;
+onkeyup=e=>keys[e.key.toLowerCase()]=false;
+canvas.onmousemove=e=>{
+mouse.x=e.clientX;
+mouse.y=e.clientY;
+};
 
-onkeydown = e => keys[e.key] = true;
-onkeyup = e => keys[e.key] = false;
+/* LOOP */
+let running=false, loopType="";
 
 function stopGame(){
-if(loop) clearInterval(loop);
-loop = null;
+running=false;
+canvas.style.display="none";
 }
 
-// INIT
+function gameLoop(){
+if(!running) return;
+
+if(loopType==="soccer") soccerGame();
+if(loopType==="dash") dashGame();
+
+requestAnimationFrame(gameLoop);
+}
+
 updateUI();
