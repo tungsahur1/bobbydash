@@ -1,3 +1,4 @@
+window.startDash = startDash;
 function startDash(){
 showScreen(null);
 game.style.display = "block";
