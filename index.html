@@ -190,7 +190,7 @@ function soccerLoop(){
 let cube, spikes;
 
 function startDash(){
-    go("");
+    document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
     running = true;
 
     cube = {x:100,y:300,vy:0};
