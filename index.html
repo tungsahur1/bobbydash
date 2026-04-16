@@ -2,14 +2,14 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Retro Casino 6.0 (Stable)</title>
+<title>Retro Casino 5.2</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
 <style>
 body{
 margin:0;
 font-family:'Press Start 2P';
-background:linear-gradient(135deg,#000428,#004e92);
+background:url("https://images.unsplash.com/photo-1511512578047-dfb367046420") center/cover;
 color:#0ff;
 overflow:hidden;
 }
@@ -22,7 +22,7 @@ display:flex;
 justify-content:center;
 align-items:center;
 flex-direction:column;
-z-index:2;
+background:rgba(0,0,0,0.6);
 }
 
 .hidden{display:none}
@@ -75,62 +75,83 @@ margin:5px;
 <body>
 
 <!-- START -->
-<div id="startScreen" class="screen">
+<div id="start" class="screen">
 <h1>RETRO CASINO</h1>
-<button onclick="startGame()">START</button>
+<button onclick="go('menu')">START</button>
 </div>
 
 <!-- MENU -->
-<div id="menuScreen" class="screen hidden">
-<button onclick="openGames()">PLAY</button>
-<button onclick="openUpgrades()">UPGRADES</button>
-<button onclick="openEditor()">SOCCER TEAM</button>
+<div id="menu" class="screen hidden">
+<button onclick="go('soccerMenu')">SOCCER</button>
+<button onclick="startDash()">DASH</button>
+<button onclick="go('settings')">SETTINGS</button>
+<button onclick="go('editor')">TEAM EDITOR</button>
 </div>
 
-<!-- GAMES -->
-<div id="gamesScreen" class="screen hidden">
-<button onclick="startDash()">DASH</button>
-<button onclick="startFootball()">FOOTBALL</button>
-<button onclick="startSoccer()">SOCCER</button>
-<button onclick="backMenu()">BACK</button>
+<!-- SOCCER MENU -->
+<div id="soccerMenu" class="screen hidden">
+<button onclick="startSoccer()">NORMAL</button>
+<button onclick="startWorldCup()">WORLD CUP (LVL 10)</button>
+<button onclick="go('onlineMenu')">1V1</button>
+<button onclick="go('menu')">BACK</button>
+</div>
+
+<!-- ONLINE -->
+<div id="onlineMenu" class="screen hidden">
+<button onclick="createRoom()">CREATE ROOM</button>
+<button onclick="joinRoom()">JOIN ROOM</button>
+<button onclick="go('soccerMenu')">BACK</button>
+<p id="roomCode"></p>
+</div>
+
+<!-- SETTINGS -->
+<div id="settings" class="screen hidden">
+<h3>DIFFICULTY</h3>
+<button onclick="setDiff(1)">EASY</button>
+<button onclick="setDiff(2)">NORMAL</button>
+<button onclick="setDiff(3)">HARD</button>
+<button onclick="setDiff(4)">EXTREME</button>
+
+<h3>SPEED</h3>
+<button onclick="setSpeed(1)">NORMAL</button>
+<button onclick="setSpeed(2)">FAST</button>
+<button onclick="setSpeed(3)">INSANE</button>
+
+<button onclick="go('menu')">BACK</button>
 </div>
 
 <!-- EDITOR -->
-<div id="editorScreen" class="screen hidden">
+<div id="editor" class="screen hidden">
 <div id="editorBox"></div>
 
 <div>
 GOALS:
 <button class="goalBtn" onclick="setGoals(1)">1</button>
-<button class="goalBtn" onclick="setGoals(2)">2</button>
 <button class="goalBtn" onclick="setGoals(3)">3</button>
+<button class="goalBtn" onclick="setGoals(5)">5</button>
 </div>
 
 <button onclick="saveLayout()">SAVE</button>
-<button onclick="backMenu()">BACK</button>
+<button onclick="go('menu')">BACK</button>
 </div>
 
-<div id="topUI">🪙 <span id="coins">0</span></div>
+<div id="topUI">🪙 <span id="coins"></span></div>
 <div id="bottomUI"><span id="user"></span> | LVL <span id="lvl"></span></div>
 
 <canvas id="game"></canvas>
 
 <script>
 
-// ===== DATA (PRESERVED) =====
+// ===== DATA =====
 let data = JSON.parse(localStorage.getItem("retroSave")) || {
-coins:0,
-lvl:1,
-user:null,
-layout:[
-{x:50,y:50},
-{x:200,y:150},
-{x:350,y:250}
-],
-goals:1
+coins:0,lvl:1,user:null,
+layout:[{x:50,y:50},{x:200,y:150},{x:350,y:250}],
+goals:1,
+difficulty:2,
+speed:1
 };
 
-if(!data.user) data.user = prompt("Username");
+if(!data.user) data.user=prompt("Username");
 
 // SAVE
 function save(){
@@ -140,101 +161,71 @@ lvl.innerText=data.lvl;
 user.innerText=data.user;
 }
 
-// SCREENS
-function show(id){
+// NAV
+function go(id){
 document.querySelectorAll(".screen").forEach(s=>s.classList.add("hidden"));
-if(id) document.getElementById(id).classList.remove("hidden");
+document.getElementById(id).classList.remove("hidden");
 }
 
-// NAV
-function startGame(){show("menuScreen");save()}
-function openGames(){show("gamesScreen")}
-function openUpgrades(){alert("Upgrades coming soon")}
-function openEditor(){show("editorScreen");loadEditor()}
-function backMenu(){show("menuScreen")}
+// SETTINGS
+function setDiff(d){data.difficulty=d;save()}
+function setSpeed(s){data.speed=s;save()}
+function setGoals(g){data.goals=g;save()}
 
 // ===== EDITOR =====
 let dragging=null;
 
 function loadEditor(){
-let box=document.getElementById("editorBox");
+let box=editorBox;
 box.innerHTML="";
-
 data.layout.forEach((p,i)=>{
 let el=document.createElement("div");
 el.className="player";
 el.style.left=p.x+"px";
 el.style.top=p.y+"px";
-
 el.onmousedown=()=>dragging=el;
-
 box.appendChild(el);
 });
 
 document.onmousemove=e=>{
 if(dragging){
-let rect=box.getBoundingClientRect();
-dragging.style.left=(e.clientX-rect.left-15)+"px";
-dragging.style.top=(e.clientY-rect.top-15)+"px";
+let r=box.getBoundingClientRect();
+dragging.style.left=(e.clientX-r.left-15)+"px";
+dragging.style.top=(e.clientY-r.top-15)+"px";
 }
 };
-
 document.onmouseup=()=>dragging=null;
 }
 
 function saveLayout(){
 document.querySelectorAll(".player").forEach((p,i)=>{
-data.layout[i]={
-x:parseInt(p.style.left),
-y:parseInt(p.style.top)
-};
+data.layout[i]={x:parseInt(p.style.left),y:parseInt(p.style.top)};
 });
-save();
-alert("Saved!");
-}
-
-function setGoals(n){
-data.goals=n;
 save();
 }
 
 // ===== CANVAS =====
-const c=document.getElementById("game");
+const c=game;
 const ctx=c.getContext("2d");
 
-function resize(){
-c.width=window.innerWidth;
-c.height=window.innerHeight;
-}
+function resize(){c.width=innerWidth;c.height=innerHeight}
 resize();
-window.onresize=resize;
+onresize=resize;
 
-let loop;
+let keys={};
+onkeydown=e=>keys[e.key]=true;
+onkeyup=e=>keys[e.key]=false;
 
-function stopGame(){
-clearInterval(loop);
-document.onkeydown=null;
-document.onclick=null;
-}
-
-// ===== SOCCER (FIXED) =====
+// ===== SOCCER =====
 function startSoccer(){
-stopGame();
-show("");
-
+go("");
 let players=data.layout.map(p=>({x:p.x+100,y:p.y+100}));
-let enemies=[
-{x:c.width-200,y:200},
-{x:c.width-200,y:350},
-{x:c.width-200,y:500}
-];
-
+let enemies=[{x:c.width-200,y:200},{x:c.width-200,y:350},{x:c.width-200,y:500}];
 let ball={x:c.width/2,y:c.height/2};
 let current=0;
-let score=0;
-let enemyScore=0;
+let score=0,enemyScore=0;
 
-loop=setInterval(()=>{
+setInterval(()=>{
 ctx.clearRect(0,0,c.width,c.height);
 
 // field
@@ -247,7 +238,6 @@ ctx.fillRect(20,c.height/2-120,20,240);
 ctx.fillRect(c.width-40,c.height/2-120,20,240);
 
 // ball
-ctx.fillStyle="white";
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,10,0,6.28);
 ctx.fill();
@@ -258,21 +248,18 @@ ctx.fillStyle="blue";
 ctx.fillRect(p.x,p.y,30,30);
 });
 
-// AI FIX (NO MERGE)
+// enemies FIXED AI
 enemies.forEach((e,i)=>{
 let dx=ball.x-e.x;
 let dy=ball.y-e.y;
+e.x+=dx*0.03*data.difficulty;
+e.y+=dy*0.03*data.difficulty;
 
-e.x+=dx*0.02;
-e.y+=dy*0.02;
-
-enemies.forEach(other=>{
-if(other!==e){
-let dist=Math.hypot(e.x-other.x,e.y-other.y);
-if(dist<40){
-e.x+=(e.x-other.x)*0.05;
-e.y+=(e.y-other.y)*0.05;
-}
+// separation
+enemies.forEach(o=>{
+if(o!==e){
+let d=Math.hypot(e.x-o.x,e.y-o.y);
+if(d<40){e.x+=(e.x-o.x)*0.1;e.y+=(e.y-o.y)*0.1;}
 }
 });
 
@@ -281,85 +268,76 @@ ctx.fillRect(e.x,e.y,30,30);
 
 // steal
 if(Math.abs(e.x-ball.x)<25){
-ball.x-=4;
+ball.x-=6;
 }
 });
 
-// player lock
+// movement (MULTI KEY FIX)
 let p=players[current];
+let speed=5*data.speed;
+
+if(keys["ArrowUp"])p.y-=speed;
+if(keys["ArrowDown"])p.y+=speed;
+if(keys["ArrowLeft"])p.x-=speed;
+if(keys["ArrowRight"])p.x+=speed;
+
+// ball lock
 if(Math.abs(p.x-ball.x)<30){
 ball.x=p.x;
 ball.y=p.y;
 }
 
-// movement
-document.onkeydown=e=>{
-if(e.key==="ArrowUp")p.y-=10;
-if(e.key==="ArrowDown")p.y+=10;
-if(e.key==="ArrowLeft")p.x-=10;
-if(e.key==="ArrowRight")p.x+=10;
-};
+// goals FIX (NO OUT OF BOUNDS)
+if(ball.x>c.width-50){score++;reset();}
+if(ball.x<50){enemyScore++;reset();}
 
-// pass
-document.onclick=e=>{
-players.forEach((pl,i)=>{
-if(Math.abs(e.clientX-pl.x)<80 && Math.abs(e.clientY-pl.y)<80){
-current=i;
-ball.x=pl.x;
-ball.y=pl.y;
-}
-});
-};
-
-// scoring
-if(ball.x>c.width-50){
-score++;
-reset();
-}
-if(ball.x<50){
-enemyScore++;
-reset();
-}
-
-ctx.fillStyle="white";
-ctx.fillText(score+"-"+enemyScore, c.width/2,50);
+ctx.fillText(score+"-"+enemyScore,c.width/2,50);
 
 if(score>=data.goals || enemyScore>=data.goals){
-endSoccer(score>enemyScore);
+end(score>enemyScore);
 }
 
 },30);
 
-// FIX: RESET POSITIONS
 function reset(){
 ball.x=c.width/2;
 ball.y=c.height/2;
-
 players=data.layout.map(p=>({x:p.x+100,y:p.y+100}));
-
-enemies=[
-{x:c.width-200,y:200},
-{x:c.width-200,y:350},
-{x:c.width-200,y:500}
-];
 }
 
-function endSoccer(win){
-stopGame();
-data.coins+=win?120:40;
+function end(win){
+data.coins+=win?(50*data.goals):20;
 data.lvl++;
 save();
-show("gamesScreen");
+go("soccerMenu");
 }
 }
 
-// ===== PLACEHOLDER (kept working) =====
-function startDash(){alert("Dash still working")}
-function startFootball(){alert("Football still working")}
+// WORLD CUP (HARDER)
+function startWorldCup(){
+if(data.lvl<10){alert("LOCKED");return;}
+data.goals=5;
+data.difficulty=4;
+startSoccer();
+}
+
+// DASH (kept)
+function startDash(){alert("Dash still here")}
+
+// ONLINE MOCK
+function createRoom(){
+let code=Math.random().toString(36).substring(2,6).toUpperCase();
+roomCode.innerText="CODE: "+code;
+}
+function joinRoom(){
+let c=prompt("Enter Code");
+alert("Joined "+c+" (mock)");
+}
 
 // INIT
-show("startScreen");
+go("start");
 save();
+loadEditor();
 
 </script>
 
