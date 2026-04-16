@@ -1,14 +1,25 @@
-let selectedPlayer = 0;
+let selected = 0;
+
+function drawPlayer(p, color){
+ctx.fillStyle = "#ffd39b"; // head
+ctx.fillRect(p.x+8, p.y-8, 14, 14);
+
+ctx.fillStyle = color; // shirt
+ctx.fillRect(p.x, p.y, 30, 20);
+
+ctx.fillStyle = "white"; // legs
+ctx.fillRect(p.x+3, p.y+20, 8, 12);
+ctx.fillRect(p.x+18, p.y+20, 8, 12);
+}
 
 function startSoccer(){
 showScreen(null);
-game.style.display = "block";
+game.style.display="block";
 
-// ===== TEAMS =====
 let players = [
-{x:150,y:200,vx:0,vy:0},
-{x:150,y:350,vx:0,vy:0},
-{x:150,y:500,vx:0,vy:0}
+{x:150,y:200},
+{x:150,y:350},
+{x:150,y:500}
 ];
 
 let enemies = [
@@ -19,16 +30,15 @@ let enemies = [
 
 let ball = {x:game.width/2,y:game.height/2,owner:null};
 
-// ===== CLICK PASS =====
+// PASS SYSTEM
 game.onclick = (e)=>{
 let rect = game.getBoundingClientRect();
 let mx = e.clientX - rect.left;
 let my = e.clientY - rect.top;
 
-// find teammate clicked
 players.forEach((p,i)=>{
-if(Math.abs(mx-p.x)<30 && Math.abs(my-p.y)<30){
-selectedPlayer = i;
+if(Math.hypot(mx-p.x,my-p.y)<40){
+selected = i;
 if(ball.owner !== null){
 ball.owner = i;
 }
@@ -36,12 +46,11 @@ ball.owner = i;
 });
 };
 
-// ===== LOOP =====
 loop = setInterval(()=>{
 ctx.clearRect(0,0,game.width,game.height);
 
 // FIELD
-ctx.fillStyle="green";
+ctx.fillStyle="#0a7a0a";
 ctx.fillRect(0,0,game.width,game.height);
 
 // GOALS
@@ -49,72 +58,73 @@ ctx.fillStyle="white";
 ctx.fillRect(0,game.height/2-120,20,240);
 ctx.fillRect(game.width-20,game.height/2-120,20,240);
 
-// ===== PLAYERS =====
-players.forEach((p,i)=>{
-
-// movement input
-if(i===selectedPlayer){
-let speed=5;
+// PLAYER CONTROL
+let p = players[selected];
+let speed = 6;
 
 if(keys["ArrowUp"]) p.y-=speed;
 if(keys["ArrowDown"]) p.y+=speed;
 if(keys["ArrowLeft"]) p.x-=speed;
 if(keys["ArrowRight"]) p.x+=speed;
+
+// KEEP IN BOUNDS
+p.x = Math.max(0, Math.min(game.width-30, p.x));
+p.y = Math.max(0, Math.min(game.height-30, p.y));
+
+// PICKUP BALL (FIXED)
+if(Math.hypot(p.x-ball.x,p.y-ball.y)<30){
+ball.owner = selected;
 }
 
-// animation color shift
-ctx.fillStyle = (i===selectedPlayer) ? "#00ffff" : "#009999";
-ctx.fillRect(p.x,p.y,30,30);
-
-// ball pickup
-if(Math.hypot(p.x-ball.x,p.y-ball.y)<25){
-ball.owner = i;
-}
-});
-
-// ===== ENEMIES =====
+// ENEMY AI
 enemies.forEach(e=>{
 let dx = ball.x - e.x;
 let dy = ball.y - e.y;
 
-// chase
-e.x += dx * 0.03;
-e.y += dy * 0.03;
-
-// separation (FIX merge bug)
-enemies.forEach(o=>{
-if(o!==e){
-let d=Math.hypot(e.x-o.x,e.y-o.y);
-if(d<35){
-e.x += (e.x-o.x)*0.1;
-e.y += (e.y-o.y)*0.1;
-}
-}
-});
+e.x += dx * 0.04;
+e.y += dy * 0.04;
 
 // steal
 if(Math.hypot(e.x-ball.x,e.y-ball.y)<25){
 ball.owner = null;
 }
 
-ctx.fillStyle="red";
-ctx.fillRect(e.x,e.y,30,30);
+// separation FIX
+enemies.forEach(o=>{
+if(o!==e){
+let d=Math.hypot(e.x-o.x,e.y-o.y);
+if(d<40){
+e.x += (e.x-o.x)*0.1;
+e.y += (e.y-o.y)*0.1;
+}
+}
+});
 });
 
-// ===== BALL LOGIC =====
+// BALL FOLLOW
 if(ball.owner !== null){
-let p = players[ball.owner];
-ball.x = p.x;
-ball.y = p.y;
+let owner = players[ball.owner];
+ball.x = owner.x + 15;
+ball.y = owner.y + 10;
 }
 
-// draw ball
+// DRAW BALL
 ctx.fillStyle="white";
 ctx.beginPath();
-ctx.arc(ball.x,ball.y,10,0,6.28);
+ctx.arc(ball.x,ball.y,8,0,6.28);
 ctx.fill();
 
-// ===== GOALS =====
+// DRAW PLAYERS
+players.forEach((pl,i)=>{
+drawPlayer(pl, i===selected ? "#00ffff" : "#008888");
+});
+
+// DRAW ENEMIES
+enemies.forEach(e=>{
+drawPlayer(e,"red");
+});
+
+// GOALS
 if(ball.x > game.width-20){
 data.coins += 100;
 save();
