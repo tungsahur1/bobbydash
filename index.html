@@ -11,6 +11,7 @@ font-family:monospace;
 overflow:hidden;
 }
 
+/* 5.1 STYLE */
 .screen{
 position:absolute;
 width:100%;
@@ -37,6 +38,7 @@ position:absolute;
 top:10px;
 left:10px;
 color:gold;
+z-index:5;
 }
 
 canvas{
@@ -44,6 +46,7 @@ position:absolute;
 top:0;
 left:0;
 display:none;
+background:black; /* FIX WHITE SCREEN */
 }
 </style>
 </head>
@@ -56,32 +59,227 @@ display:none;
 <h1>RETRO GAMES</h1>
 <button onclick="show('soccerMenu')">SOCCER</button>
 <button onclick="startDash()">DASH</button>
-<button onclick="show('patch')">PATCH NOTES</button>
+<button onclick="show('settings')">SETTINGS</button>
 </div>
 
 <div id="soccerMenu" class="screen">
-<button onclick="startSoccer(3,3)">NORMAL</button>
-<button onclick="startSoccer(5,5)">WORLD CUP</button>
+<button onclick="startSoccer()">PLAY</button>
 <button onclick="show('menu')">BACK</button>
 </div>
 
-<div id="patch" class="screen">
-<h3>PATCH NOTES 5.5</h3>
-<p>• Full soccer rework</p>
-<p>• Passing + switching system</p>
-<p>• AI improved</p>
-<p>• Dash overhaul</p>
-<p>• White screen fixed</p>
-<p>• Data sync added</p>
-<p>credit to bobby vin vin and ryan for the ideas of this website.</p>
+<div id="settings" class="screen">
+<button onclick="save()">SAVE</button>
 <button onclick="show('menu')">BACK</button>
 </div>
 
 <canvas id="game"></canvas>
 
-<script src="main.js"></script>
-<script src="soccer.js"></script>
-<script src="dash.js"></script>
+<script>
+/* ================= CORE ================= */
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+function resize(){
+canvas.width=innerWidth;
+canvas.height=innerHeight;
+}
+resize();
+onresize=resize;
+
+/* DATA */
+let data = JSON.parse(localStorage.getItem("save")) || {
+coins:100,
+xp:0,
+lvl:1
+};
+
+function save(){
+localStorage.setItem("save",JSON.stringify(data));
+updateUI();
+}
+
+function updateUI(){
+document.getElementById("topbar").innerText =
+`Coins: ${data.coins} | XP: ${data.xp} | LVL: ${data.lvl}`;
+}
+
+/* SCREENS */
+function show(id){
+stopGame();
+document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+document.getElementById(id).classList.add("active");
+canvas.style.display="none";
+}
+
+/* INPUT (FIXED MULTI-KEY) */
+let keys={};
+onkeydown=e=>keys[e.key.toLowerCase()]=true;
+onkeyup=e=>keys[e.key.toLowerCase()]=false;
+
+/* LOOP */
+let running=false, mode="";
+
+function stopGame(){
+running=false;
+canvas.style.display="none";
+}
+
+function loop(){
+if(!running) return;
+
+if(mode==="soccer") soccerGame();
+if(mode==="dash") dashGame();
+
+requestAnimationFrame(loop);
+}
+
+updateUI();
+
+/* ================= SOCCER (FIXED) ================= */
+let player, enemies, ball;
+
+function startSoccer(){
+document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+canvas.style.display="block";
+
+running=true;
+mode="soccer";
+
+player={x:200,y:300};
+enemies=[
+{x:800,y:200},
+{x:800,y:400}
+];
+
+ball={x:400,y:300,vx:0,vy:0};
+
+requestAnimationFrame(loop);
+}
+
+function soccerGame(){
+
+ctx.fillStyle="#0a7a0a";
+ctx.fillRect(0,0,canvas.width,canvas.height);
+
+/* GOALS */
+ctx.fillStyle="white";
+ctx.fillRect(canvas.width-40,200,40,200);
+
+/* PLAYER MOVE */
+if(keys["w"]) player.y-=5;
+if(keys["s"]) player.y+=5;
+if(keys["a"]) player.x-=5;
+if(keys["d"]) player.x+=5;
+
+/* KEEP IN FIELD (FIX BUG) */
+player.x=Math.max(0,Math.min(canvas.width,player.x));
+player.y=Math.max(0,Math.min(canvas.height,player.y));
+
+/* BALL PICKUP (FIXED) */
+let dx=ball.x-player.x;
+let dy=ball.y-player.y;
+
+if(Math.hypot(dx,dy)<30){
+ball.x=player.x+15;
+ball.y=player.y;
+}
+
+/* ENEMY AI (NO MERGE) */
+enemies.forEach((e,i)=>{
+let target = i===0 ? ball : player;
+
+let dx=target.x-e.x;
+let dy=target.y-e.y;
+let d=Math.hypot(dx,dy)||1;
+
+e.x+=dx/d*2;
+e.y+=dy/d*2;
+});
+
+/* GOAL */
+if(ball.x>canvas.width-40){
+data.coins+=20;
+data.xp+=10;
+updateUI();
+endGame();
+return;
+}
+
+/* DRAW */
+ctx.fillStyle="blue";
+ctx.fillRect(player.x,player.y,20,20);
+
+ctx.fillStyle="red";
+enemies.forEach(e=>ctx.fillRect(e.x,e.y,20,20));
+
+ctx.fillStyle="white";
+ctx.beginPath();
+ctx.arc(ball.x,ball.y,8,0,6.28);
+ctx.fill();
+}
+
+/* ================= DASH (FIXED) ================= */
+let cube, spikes;
+
+function startDash(){
+document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+canvas.style.display="block";
+
+running=true;
+mode="dash";
+
+cube={x:150,y:300,vy:0};
+spikes=[{x:600},{x:900}];
+
+requestAnimationFrame(loop);
+}
+
+function dashGame(){
+
+ctx.fillStyle="#111"; /* FIX WHITE SCREEN */
+ctx.fillRect(0,0,canvas.width,canvas.height);
+
+/* GRAVITY */
+cube.vy+=0.5;
+cube.y+=cube.vy;
+
+/* JUMP FIX */
+if((keys[" "]||keys["w"]||keys["arrowup"]) && cube.y>=300){
+cube.vy=-8;
+}
+
+/* FLOOR */
+if(cube.y>300){
+cube.y=300;
+cube.vy=0;
+}
+
+/* SPIKES */
+spikes.forEach(s=>{
+s.x-=4;
+
+if(s.x<-20) s.x=canvas.width+200;
+
+if(cube.x<s.x+20 && cube.x+20>s.x && cube.y+20>300){
+endGame();
+}
+
+ctx.fillStyle="red";
+ctx.fillRect(s.x,300,20,20);
+});
+
+/* DRAW */
+ctx.fillStyle="cyan";
+ctx.fillRect(cube.x,cube.y,20,20);
+}
+
+/* ================= END ================= */
+function endGame(){
+running=false;
+canvas.style.display="none";
+show("menu");
+}
+</script>
 
 </body>
 </html>
