@@ -2,14 +2,14 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Retro Games 5.3</title>
+<title>Retro Games 5.4</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
 <style>
 body{
 margin:0;
 font-family:'Press Start 2P';
-background:#000;
+background:black;
 color:#0ff;
 overflow:hidden;
 }
@@ -23,13 +23,12 @@ justify-content:center;
 align-items:center;
 flex-direction:column;
 background:rgba(0,0,0,0.85);
-z-index:10;
 }
 
 .hidden{display:none}
 
 button{
-padding:18px;
+padding:15px;
 margin:10px;
 background:black;
 color:#0ff;
@@ -47,48 +46,36 @@ height:100%;
 display:none;
 }
 
-#editorBox{
-width:600px;
-height:350px;
-border:5px solid white;
-position:relative;
-background:#111;
-}
-
-.player{
-width:40px;
-height:40px;
-background:cyan;
+#msg{
 position:absolute;
-cursor:grab;
+top:10px;
+left:10px;
+color:yellow;
 }
 </style>
 </head>
 <body>
 
+<div id="msg"></div>
+
+<!-- START -->
 <div id="start" class="screen">
-<h1>RETRO GAMES 5.3</h1>
+<h1>RETRO GAMES 5.4</h1>
 <button onclick="go('menu')">START</button>
 </div>
 
+<!-- MENU -->
 <div id="menu" class="screen hidden">
+<h3>COINS: <span id="coins">0</span></h3>
 <button onclick="startSoccer()">SOCCER</button>
 <button onclick="startDash()">DASH</button>
-<button onclick="go('editor')">TEAM EDITOR</button>
 <button onclick="go('settings')">SETTINGS</button>
+<button onclick="go('start')">BACK</button>
 </div>
 
+<!-- SETTINGS -->
 <div id="settings" class="screen hidden">
-<button onclick="setSpeed(1)">NORMAL</button>
-<button onclick="setSpeed(2)">FAST</button>
-<button onclick="setSpeed(3)">INSANE</button>
-<button onclick="save()">SAVE</button>
-<button onclick="go('menu')">BACK</button>
-</div>
-
-<div id="editor" class="screen hidden">
-<div id="editorBox"></div>
-<button onclick="saveLayout()">SAVE</button>
+<button onclick="save()">SAVE SETTINGS</button>
 <button onclick="go('menu')">BACK</button>
 </div>
 
@@ -98,12 +85,13 @@ cursor:grab;
 
 // ===== DATA =====
 let data = JSON.parse(localStorage.getItem("retroSave")) || {
-layout:[{x:100,y:100},{x:250,y:200},{x:400,y:150}],
-speed:1
+coins:0
 };
 
 function save(){
 localStorage.setItem("retroSave",JSON.stringify(data));
+msg.innerText="Saved!";
+setTimeout(()=>msg.innerText="",2000);
 }
 
 // ===== NAV =====
@@ -111,39 +99,12 @@ function go(id){
 stopGame();
 document.querySelectorAll(".screen").forEach(s=>s.classList.add("hidden"));
 game.style.display="none";
-if(id) document.getElementById(id).classList.remove("hidden");
+document.getElementById(id).classList.remove("hidden");
+updateUI();
 }
 
-// ===== EDITOR =====
-let dragging=null;
-
-function loadEditor(){
-editorBox.innerHTML="";
-data.layout.forEach(p=>{
-let el=document.createElement("div");
-el.className="player";
-el.style.left=p.x+"px";
-el.style.top=p.y+"px";
-
-el.onmousedown=()=>dragging=el;
-editorBox.appendChild(el);
-});
-
-document.onmousemove=e=>{
-if(dragging){
-let r=editorBox.getBoundingClientRect();
-dragging.style.left=(e.clientX-r.left-20)+"px";
-dragging.style.top=(e.clientY-r.top-20)+"px";
-}
-};
-document.onmouseup=()=>dragging=null;
-}
-
-function saveLayout(){
-document.querySelectorAll(".player").forEach((p,i)=>{
-data.layout[i]={x:parseInt(p.style.left),y:parseInt(p.style.top)};
-});
-save();
+function updateUI(){
+coins.innerText=data.coins;
 }
 
 // ===== CANVAS =====
@@ -168,13 +129,13 @@ if(loop) clearInterval(loop);
 loop=null;
 }
 
-// ===== SOCCER (PLAYABLE) =====
+// ===== SOCCER (FIXED) =====
 function startSoccer(){
 go(null);
 c.style.display="block";
 
-let players=data.layout.map(p=>({x:p.x+100,y:p.y+100}));
-let enemies=[{x:c.width-200,y:200},{x:c.width-200,y:350}];
+let player={x:200,y:200};
+let enemy={x:c.width-200,y:200};
 let ball={x:c.width/2,y:c.height/2};
 
 loop=setInterval(()=>{
@@ -184,60 +145,64 @@ ctx.clearRect(0,0,c.width,c.height);
 ctx.fillStyle="green";
 ctx.fillRect(0,0,c.width,c.height);
 
+// goals
+ctx.fillStyle="white";
+ctx.fillRect(0,c.height/2-100,20,200);
+ctx.fillRect(c.width-20,c.height/2-100,20,200);
+
 // ball
 ctx.fillStyle="white";
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,10,0,6.28);
 ctx.fill();
 
-// players
-players.forEach(p=>{
+// player
 ctx.fillStyle="cyan";
-ctx.fillRect(p.x,p.y,30,30);
-});
+ctx.fillRect(player.x,player.y,30,30);
 
-// enemies
-enemies.forEach(e=>{
-let dx=ball.x-e.x;
-let dy=ball.y-e.y;
-e.x+=dx*0.05;
-e.y+=dy*0.05;
-
+// enemy
 ctx.fillStyle="red";
-ctx.fillRect(e.x,e.y,30,30);
-
-// steal
-if(Math.abs(e.x-ball.x)<25){
-ball.x-=6;
-}
-});
+ctx.fillRect(enemy.x,enemy.y,30,30);
 
 // movement
-let p=players[0];
-let speed=6*data.speed;
+if(keys["ArrowUp"])player.y-=5;
+if(keys["ArrowDown"])player.y+=5;
+if(keys["ArrowLeft"])player.x-=5;
+if(keys["ArrowRight"])player.x+=5;
 
-if(keys["ArrowUp"])p.y-=speed;
-if(keys["ArrowDown"])p.y+=speed;
-if(keys["ArrowLeft"])p.x-=speed;
-if(keys["ArrowRight"])p.x+=speed;
-
-// ball lock
-if(Math.abs(p.x-ball.x)<30){
-ball.x=p.x;
-ball.y=p.y;
+// ball follow
+if(Math.abs(player.x-ball.x)<30){
+ball.x=player.x;
+ball.y=player.y;
 }
 
-// goals
-if(ball.x>c.width-50 || ball.x<50){
-ball.x=c.width/2;
-ball.y=c.height/2;
-players=data.layout.map(p=>({x:p.x+100,y:p.y+100}));
+// enemy AI
+let dx=ball.x-enemy.x;
+let dy=ball.y-enemy.y;
+enemy.x+=dx*0.03;
+enemy.y+=dy*0.03;
+
+// steal
+if(Math.abs(enemy.x-ball.x)<30){
+ball.x-=5;
+}
+
+// scoring
+if(ball.x>c.width-20){
+data.coins+=50;
+save();
+msg.innerText="+50 coins!";
+setTimeout(()=>msg.innerText="",1500);
+go("menu");
+}
+if(ball.x<20){
+go("menu");
 }
 
 },30);
 }
 
-// ===== DASH (REAL GAME) =====
+// ===== DASH (FIXED COLLISION) =====
 function startDash(){
 go(null);
 c.style.display="block";
@@ -245,9 +210,8 @@ c.style.display="block";
 let x=200;
 let y=c.height-150;
 let vel=0;
-let gravity=1;
 
-let spikes=[400,700,1000];
+let spikes=[400,600,800];
 
 loop=setInterval(()=>{
 ctx.clearRect(0,0,c.width,c.height);
@@ -265,13 +229,14 @@ ctx.fillStyle="red";
 spikes.forEach(s=>{
 ctx.beginPath();
 ctx.moveTo(s,c.height-100);
-ctx.lineTo(s+20,c.height-130);
+ctx.lineTo(s+20,c.height-140);
 ctx.lineTo(s+40,c.height-100);
 ctx.fill();
 
-// collision
-if(x+40>s && x<s+40 && y>c.height-140){
-alert("You died");
+// collision FIXED
+if(x+40>s && x<s+40 && y+40>c.height-120){
+msg.innerText="You Died!";
+setTimeout(()=>msg.innerText="",1500);
 go("menu");
 }
 });
@@ -285,7 +250,7 @@ if(keys[" "] && y>=c.height-150){
 vel=-15;
 }
 
-vel+=gravity;
+vel+=1;
 y+=vel;
 
 if(y>c.height-150){
@@ -294,14 +259,13 @@ vel=0;
 }
 
 x+=6;
-if(x>c.width)x=0;
 
 },30);
 }
 
 // INIT
 go("start");
-loadEditor();
+updateUI();
 
 </script>
 
