@@ -1,59 +1,49 @@
 function startDash(){
-showScreen(null);
-game.style.display="block";
+document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+canvas.style.display="block";
 
-let x=200;
-let y=game.height-150;
-let vel=0;
+running=true;
+loopType="dash";
 
-let spikes=[400,500,600,750,900];
+cube={x:150,y:300,vy:0};
+spikes=[{x:600},{x:900}];
 
-loop=setInterval(()=>{
-ctx.clearRect(0,0,game.width,game.height);
-
-// background
-ctx.fillStyle="#001122";
-ctx.fillRect(0,0,game.width,game.height);
-
-// ground
-ctx.fillStyle="#222";
-ctx.fillRect(0,game.height-100,game.width,100);
-
-// spikes
-ctx.fillStyle="#ff0044";
-spikes.forEach(s=>{
-ctx.beginPath();
-ctx.moveTo(s,game.height-100);
-ctx.lineTo(s+20,game.height-140);
-ctx.lineTo(s+40,game.height-100);
-ctx.fill();
-
-// collision
-if(x+40>s && x<s+40 && y+40>game.height-120){
-showScreen("menu");
+requestAnimationFrame(gameLoop);
 }
+
+let cube, spikes;
+
+function dashGame(){
+
+ctx.fillStyle="#001122";
+ctx.fillRect(0,0,canvas.width,canvas.height);
+
+cube.vy+=0.5;
+cube.y+=cube.vy;
+
+if(keys[" "] && cube.y>=300){
+cube.vy=-8;
+}
+
+if(cube.y>300){
+cube.y=300;
+cube.vy=0;
+}
+
+spikes.forEach(s=>{
+s.x-=4;
+
+if(s.x<-20) s.x=canvas.width+200;
+
+if(cube.x<s.x+20 && cube.x+20>s.x && cube.y+20>300){
+stopGame();
+show("menu");
+}
+
+ctx.fillStyle="red";
+ctx.fillRect(s.x,300,20,20);
 });
 
-// cube
-ctx.fillStyle="#00ffff";
-ctx.fillRect(x,y,40,40);
-
-// FAST JUMP (FIXED)
-if(keys[" "] && y>=game.height-150){
-vel = -12;
+ctx.fillStyle="cyan";
+ctx.fillRect(cube.x,cube.y,20,20);
 }
-
-vel += 0.8;
-y += vel;
-
-if(y>game.height-150){
-y=game.height-150;
-vel=0;
-}
-
-x += 9;
-
-},30);
-}
-
-window.startDash = startDash;
