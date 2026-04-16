@@ -1,19 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Retro Games 5.2</title>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-
+<title>Retro Games v5.5</title>
 <style>
 body{
 margin:0;
 background:linear-gradient(#000,#001a2f);
-font-family:'Press Start 2P';
 color:#0ff;
+font-family:monospace;
 overflow:hidden;
 }
 
-/* SCREENS */
 .screen{
 position:absolute;
 width:100%;
@@ -25,31 +22,23 @@ flex-direction:column;
 }
 .active{display:flex;}
 
-/* BUTTONS */
 button{
-padding:18px 40px;
-margin:12px;
+padding:15px 40px;
+margin:10px;
 border:3px solid #0ff;
 background:black;
 color:#0ff;
 cursor:pointer;
 }
-button:hover{
-transform:scale(1.1);
-background:#0ff;
-color:black;
-}
+button:hover{transform:scale(1.1);}
 
-/* TOPBAR */
 #topbar{
 position:absolute;
 top:10px;
 left:10px;
 color:gold;
-font-size:12px;
 }
 
-/* CANVAS */
 canvas{
 position:absolute;
 top:0;
@@ -63,30 +52,28 @@ display:none;
 
 <div id="topbar">Coins: 0 | XP: 0 | LVL: 1</div>
 
-<!-- MAIN -->
 <div id="menu" class="screen active">
 <h1>RETRO GAMES</h1>
 <button onclick="show('soccerMenu')">SOCCER</button>
 <button onclick="startDash()">DASH</button>
-<button onclick="show('settings')">SETTINGS</button>
+<button onclick="show('patch')">PATCH NOTES</button>
 </div>
 
-<!-- SOCCER MENU -->
 <div id="soccerMenu" class="screen">
-<h2>SOCCER</h2>
 <button onclick="startSoccer(3,3)">NORMAL</button>
 <button onclick="startSoccer(5,5)">WORLD CUP</button>
 <button onclick="show('menu')">BACK</button>
 </div>
 
-<!-- SETTINGS -->
-<div id="settings" class="screen">
-<h3>SETTINGS</h3>
-<button onclick="data.speed=1">Normal Speed</button>
-<button onclick="data.speed=2">Fast Speed</button>
-<button onclick="data.diff=1">Easy</button>
-<button onclick="data.diff=2">Hard</button>
-<button onclick="save()">SAVE</button>
+<div id="patch" class="screen">
+<h3>PATCH NOTES 5.5</h3>
+<p>• Full soccer rework</p>
+<p>• Passing + switching system</p>
+<p>• AI improved</p>
+<p>• Dash overhaul</p>
+<p>• White screen fixed</p>
+<p>• Data sync added</p>
+<p>credit to bobby vin vin and ryan for the ideas of this website.</p>
 <button onclick="show('menu')">BACK</button>
 </div>
 
