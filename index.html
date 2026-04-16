@@ -2,14 +2,14 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Retro Games 5.2 Stable</title>
+<title>Retro Games Base</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
 <style>
 body{
 margin:0;
 font-family:'Press Start 2P';
-background:#000;
+background:black;
 color:#0ff;
 overflow:hidden;
 }
@@ -23,7 +23,6 @@ justify-content:center;
 align-items:center;
 flex-direction:column;
 background:rgba(0,0,0,0.85);
-z-index:10;
 }
 
 .hidden{display:none}
@@ -31,12 +30,11 @@ z-index:10;
 button{
 padding:15px;
 margin:10px;
+border:3px solid #0ff;
 background:black;
 color:#0ff;
-border:3px solid #0ff;
 cursor:pointer;
 }
-button:hover{transform:scale(1.1)}
 
 canvas{
 position:absolute;
@@ -45,329 +43,38 @@ left:0;
 width:100%;
 height:100%;
 display:none;
-z-index:1;
 }
 
 #topUI{
 position:absolute;
 top:10px;
 left:10px;
-z-index:20;
 color:yellow;
-}
-
-#msg{
-position:absolute;
-top:40px;
-left:10px;
-color:white;
 z-index:20;
-}
-
-#editorBox{
-width:600px;
-height:350px;
-border:4px solid white;
-position:relative;
-background:#111;
-}
-
-.player{
-width:40px;
-height:40px;
-background:cyan;
-position:absolute;
-cursor:grab;
 }
 </style>
 </head>
+
 <body>
 
 <div id="topUI">Coins: <span id="coins">0</span></div>
-<div id="msg"></div>
 
-<!-- START -->
 <div id="start" class="screen">
 <h1>RETRO GAMES</h1>
-<button onclick="show('menu')">START</button>
+<button onclick="showScreen('menu')">START</button>
 </div>
 
-<!-- MENU -->
 <div id="menu" class="screen hidden">
 <button onclick="startSoccer()">SOCCER</button>
 <button onclick="startDash()">DASH</button>
-<button onclick="show('editor')">TEAM EDITOR</button>
-<button onclick="show('settings')">SETTINGS</button>
-<button onclick="show('start')">BACK</button>
-</div>
-
-<!-- SETTINGS -->
-<div id="settings" class="screen hidden">
-<h3>Difficulty</h3>
-<button onclick="data.diff=1">Easy</button>
-<button onclick="data.diff=2">Normal</button>
-<button onclick="data.diff=3">Hard</button>
-
-<h3>Speed</h3>
-<button onclick="data.speed=1">Normal</button>
-<button onclick="data.speed=2">Fast</button>
-
-<button onclick="save()">SAVE</button>
-<button onclick="show('menu')">BACK</button>
-</div>
-
-<!-- EDITOR -->
-<div id="editor" class="screen hidden">
-<div id="editorBox"></div>
-<button onclick="saveLayout()">SAVE</button>
-<button onclick="show('menu')">BACK</button>
+<button onclick="showScreen('start')">BACK</button>
 </div>
 
 <canvas id="game"></canvas>
 
-<script>
-
-// ===== DATA =====
-let data = JSON.parse(localStorage.getItem("retroSave")) || {
-coins:0,
-diff:2,
-speed:1,
-layout:[
-{x:100,y:100},
-{x:250,y:200},
-{x:400,y:150}
-]
-};
-
-// ===== SAVE =====
-function save(){
-localStorage.setItem("retroSave",JSON.stringify(data));
-msg.innerText="Saved!";
-setTimeout(()=>msg.innerText="",1500);
-updateUI();
-}
-
-// ===== UI =====
-function updateUI(){
-coins.innerText=data.coins;
-}
-
-// ===== SCREEN =====
-function show(id){
-stopGame();
-document.querySelectorAll(".screen").forEach(s=>s.classList.add("hidden"));
-game.style.display="none";
-document.getElementById(id).classList.remove("hidden");
-if(id==="editor") loadEditor();
-}
-
-// ===== CANVAS =====
-const c=game;
-const ctx=c.getContext("2d");
-
-function resize(){
-c.width=innerWidth;
-c.height=innerHeight;
-}
-resize();
-onresize=resize;
-
-let loop=null;
-let keys={};
-
-onkeydown=e=>keys[e.key]=true;
-onkeyup=e=>keys[e.key]=false;
-
-function stopGame(){
-if(loop) clearInterval(loop);
-loop=null;
-}
-
-// ===== SOCCER =====
-function startSoccer(){
-show(null);
-c.style.display="block";
-
-let players=data.layout.map(p=>({x:p.x+100,y:p.y+100}));
-let enemies=[{x:c.width-200,y:200},{x:c.width-200,y:350}];
-let ball={x:c.width/2,y:c.height/2};
-
-loop=setInterval(()=>{
-ctx.clearRect(0,0,c.width,c.height);
-
-// field
-ctx.fillStyle="green";
-ctx.fillRect(0,0,c.width,c.height);
-
-// ball
-ctx.fillStyle="white";
-ctx.beginPath();
-ctx.arc(ball.x,ball.y,10,0,6.28);
-ctx.fill();
-
-// players
-players.forEach(p=>{
-ctx.fillStyle="cyan";
-ctx.fillRect(p.x,p.y,30,30);
-});
-
-// enemies AI
-enemies.forEach(e=>{
-let dx=ball.x-e.x;
-let dy=ball.y-e.y;
-
-e.x+=dx*0.04*data.diff;
-e.y+=dy*0.04*data.diff;
-
-// separation fix
-enemies.forEach(o=>{
-if(o!==e){
-let d=Math.hypot(e.x-o.x,e.y-o.y);
-if(d<40){
-e.x+=(e.x-o.x)*0.1;
-e.y+=(e.y-o.y)*0.1;
-}
-}
-});
-
-// steal
-if(Math.abs(e.x-ball.x)<30){
-ball.x-=6;
-}
-
-ctx.fillStyle="red";
-ctx.fillRect(e.x,e.y,30,30);
-});
-
-// movement
-let p=players[0];
-let speed=5*data.speed;
-
-if(keys["ArrowUp"])p.y-=speed;
-if(keys["ArrowDown"])p.y+=speed;
-if(keys["ArrowLeft"])p.x-=speed;
-if(keys["ArrowRight"])p.x+=speed;
-
-// ball follow
-if(Math.abs(p.x-ball.x)<30){
-ball.x=p.x;
-ball.y=p.y;
-}
-
-// goal
-if(ball.x>c.width-20){
-data.coins+=50;
-save();
-show("menu");
-}
-if(ball.x<20){
-show("menu");
-}
-
-},30);
-}
-
-// ===== DASH =====
-function startDash(){
-show(null);
-c.style.display="block";
-
-let x=200;
-let y=c.height-150;
-let vel=0;
-
-let spikes=[400,650,900];
-
-loop=setInterval(()=>{
-ctx.clearRect(0,0,c.width,c.height);
-
-// bg
-ctx.fillStyle="#111";
-ctx.fillRect(0,0,c.width,c.height);
-
-// ground
-ctx.fillStyle="#333";
-ctx.fillRect(0,c.height-100,c.width,100);
-
-// spikes
-ctx.fillStyle="red";
-spikes.forEach(s=>{
-ctx.beginPath();
-ctx.moveTo(s,c.height-100);
-ctx.lineTo(s+20,c.height-140);
-ctx.lineTo(s+40,c.height-100);
-ctx.fill();
-
-// collision
-if(x+40>s && x<s+40 && y+40>c.height-120){
-msg.innerText="You died!";
-setTimeout(()=>msg.innerText="",1500);
-show("menu");
-}
-});
-
-// cube
-ctx.fillStyle="cyan";
-ctx.fillRect(x,y,40,40);
-
-// jump
-if(keys[" "] && y>=c.height-150){
-vel=-15;
-}
-
-vel+=1;
-y+=vel;
-
-if(y>c.height-150){
-y=c.height-150;
-vel=0;
-}
-
-x+=6;
-
-},30);
-}
-
-// ===== EDITOR =====
-let dragging=null;
-
-function loadEditor(){
-editorBox.innerHTML="";
-data.layout.forEach(p=>{
-let el=document.createElement("div");
-el.className="player";
-el.style.left=p.x+"px";
-el.style.top=p.y+"px";
-
-el.onmousedown=()=>dragging=el;
-editorBox.appendChild(el);
-});
-
-document.onmousemove=e=>{
-if(dragging){
-let r=editorBox.getBoundingClientRect();
-dragging.style.left=(e.clientX-r.left-20)+"px";
-dragging.style.top=(e.clientY-r.top-20)+"px";
-}
-};
-document.onmouseup=()=>dragging=null;
-}
-
-function saveLayout(){
-document.querySelectorAll(".player").forEach((p,i)=>{
-data.layout[i]={
-x:parseInt(p.style.left),
-y:parseInt(p.style.top)
-};
-});
-save();
-}
-
-// INIT
-show("start");
-updateUI();
-
-</script>
+<script src="main.js"></script>
+<script src="soccer.js"></script>
+<script src="dash.js"></script>
 
 </body>
 </html>
