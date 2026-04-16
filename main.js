@@ -2,23 +2,18 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 function resize(){
-canvas.width = innerWidth;
-canvas.height = innerHeight;
+canvas.width=innerWidth;
+canvas.height=innerHeight;
 }
 resize();
-onresize = resize;
+onresize=resize;
 
-/* DATA */
-let data = JSON.parse(localStorage.getItem("save")) || {
-coins:0,
-xp:0,
-lvl:1,
-speed:1,
-diff:1
-};
+/* LOAD DATA (SYNC) */
+let old = localStorage.getItem("save");
+let data = old ? JSON.parse(old) : {coins:0,xp:0,lvl:1};
 
 function save(){
-localStorage.setItem("save", JSON.stringify(data));
+localStorage.setItem("save",JSON.stringify(data));
 updateUI();
 }
 
@@ -32,33 +27,37 @@ function show(id){
 stopGame();
 document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
 document.getElementById(id).classList.add("active");
-canvas.style.display="none";
 }
 
 /* INPUT */
-let keys={}, mouse={x:0,y:0};
+let keys={}, mouse={x:0,y:0,down:false};
+
 onkeydown=e=>keys[e.key.toLowerCase()]=true;
 onkeyup=e=>keys[e.key.toLowerCase()]=false;
+
 canvas.onmousemove=e=>{
 mouse.x=e.clientX;
 mouse.y=e.clientY;
 };
 
+canvas.onmousedown=()=>mouse.down=true;
+canvas.onmouseup=()=>mouse.down=false;
+
 /* LOOP */
-let running=false, loopType="";
+let running=false, mode="";
 
 function stopGame(){
 running=false;
 canvas.style.display="none";
 }
 
-function gameLoop(){
+function loop(){
 if(!running) return;
 
-if(loopType==="soccer") soccerGame();
-if(loopType==="dash") dashGame();
+if(mode==="soccer") soccerGame();
+if(mode==="dash") dashGame();
 
-requestAnimationFrame(gameLoop);
+requestAnimationFrame(loop);
 }
 
 updateUI();
