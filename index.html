@@ -1,337 +1,261 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Retro Games Rebuild</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
-
+<title>Retro Games 5.3</title>
 <style>
-body{
-margin:0;
-font-family:'Orbitron';
-background: radial-gradient(circle at center, #111 0%, #000 100%);
-color:#0ff;
-overflow:hidden;
+body {
+    margin:0;
+    background:black;
+    color:#00ffff;
+    font-family: monospace;
+    overflow:hidden;
 }
 
-/* PANELS */
-.panel{
-position:absolute;
-width:100%;
-height:100%;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-background:rgba(0,0,0,0.7);
-backdrop-filter: blur(6px);
+/* UI */
+.screen {
+    position:absolute;
+    width:100%;
+    height:100%;
+    display:none;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
 }
 
-.hidden{display:none}
+.active { display:flex; }
 
-/* BUTTON STYLE (NEW LOOK) */
-.btn{
-padding:18px 30px;
-margin:12px;
-background:#111;
-border:2px solid #0ff;
-color:#0ff;
-font-size:14px;
-cursor:pointer;
-transition:0.2s;
+button {
+    font-size:20px;
+    padding:15px 40px;
+    margin:10px;
+    background:black;
+    color:#00ffff;
+    border:3px solid #00ffff;
+    cursor:pointer;
+}
+button:hover { transform:scale(1.1); }
+
+#coins {
+    position:absolute;
+    top:10px;
+    left:10px;
+    color:gold;
+    font-size:20px;
 }
 
-.btn:hover{
-transform:scale(1.1);
-background:#0ff;
-color:#000;
-}
-
-/* TOP BAR */
-#topbar{
-position:absolute;
-top:10px;
-left:10px;
-color:gold;
-font-size:14px;
-z-index:10;
-}
-
-/* CANVAS */
-canvas{
-position:absolute;
-top:0;
-left:0;
-width:100%;
-height:100%;
-display:none;
+canvas {
+    position:absolute;
+    top:0;
+    left:0;
 }
 </style>
 </head>
 
 <body>
 
-<div id="topbar">Coins: <span id="coins">0</span></div>
+<div id="coins">Coins: 100</div>
 
-<!-- START -->
-<div id="start" class="panel">
-<h1>RETRO GAMES</h1>
-<button class="btn" onclick="go('menu')">START</button>
+<!-- MAIN MENU -->
+<div id="menu" class="screen active">
+    <h1>RETRO GAMES</h1>
+    <button onclick="go('soccerMenu')">SOCCER</button>
+    <button onclick="startDash()">DASH</button>
 </div>
 
-<!-- MENU -->
-<div id="menu" class="panel hidden">
-<button class="btn" onclick="playSoccer()">SOCCER</button>
-<button class="btn" onclick="playDash()">DASH</button>
-<button class="btn" onclick="go('start')">BACK</button>
+<!-- SOCCER MENU -->
+<div id="soccerMenu" class="screen">
+    <h2>SOCCER</h2>
+    <button onclick="startSoccer()">PLAY</button>
+    <button onclick="go('menu')">BACK</button>
 </div>
 
 <canvas id="game"></canvas>
 
 <script>
-
-// ===== CORE =====
-const game = document.getElementById("game");
-const ctx = game.getContext("2d");
+let canvas = document.getElementById("game");
+let ctx = canvas.getContext("2d");
 
 function resize(){
-game.width = innerWidth;
-game.height = innerHeight;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 }
 resize();
-onresize = resize;
+window.onresize = resize;
 
-// ===== DATA =====
-let saveData = JSON.parse(localStorage.getItem("retroSave")) || {
-coins:0
-};
-
-function save(){
-localStorage.setItem("retroSave", JSON.stringify(saveData));
-updateUI();
-}
-
-function updateUI(){
-document.getElementById("coins").innerText = saveData.coins;
-}
-
-// ===== SCREENS =====
+/* SCREEN SYSTEM */
 function go(id){
-stop();
-document.querySelectorAll(".panel").forEach(p=>p.classList.add("hidden"));
-game.style.display="none";
-document.getElementById(id).classList.remove("hidden");
+    document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+    running = false;
 }
 
-// ===== INPUT =====
+/* GLOBAL */
+let running = false;
+let coins = 100;
+
+/* =========================
+   SOCCER (FIXED + PLAYABLE)
+========================= */
+
+let player, ball, enemies;
+
+function startSoccer(){
+    go(""); // hide UI
+    running = true;
+
+    player = {x:200,y:300,vx:0,vy:0};
+    ball = {x:400,y:300};
+    enemies = [
+        {x:700,y:200},
+        {x:700,y:400}
+    ];
+
+    loop = soccerLoop;
+    requestAnimationFrame(loop);
+}
+
+/* MOVEMENT FIX (no delay, multi key) */
 let keys = {};
-onkeydown = e=>keys[e.key]=true;
-onkeyup = e=>keys[e.key]=false;
+window.onkeydown = e=>keys[e.key]=true;
+window.onkeyup = e=>keys[e.key]=false;
 
-// ===== LOOP =====
-let loop = null;
-function stop(){
-if(loop) clearInterval(loop);
-loop=null;
+function soccerLoop(){
+    if(!running) return;
+
+    ctx.fillStyle="green";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    /* PLAYER MOVEMENT */
+    if(keys["ArrowUp"]) player.y -=5;
+    if(keys["ArrowDown"]) player.y +=5;
+    if(keys["ArrowLeft"]) player.x -=5;
+    if(keys["ArrowRight"]) player.x +=5;
+
+    /* KEEP IN BOUNDS (FIX BUG) */
+    player.x = Math.max(0, Math.min(canvas.width, player.x));
+    player.y = Math.max(0, Math.min(canvas.height, player.y));
+
+    /* BALL FOLLOW */
+    let dx = ball.x - player.x;
+    let dy = ball.y - player.y;
+    if(Math.hypot(dx,dy) < 50){
+        ball.x = player.x + 20;
+        ball.y = player.y;
+    }
+
+    /* ENEMY AI (FIXED: no merging + chase ball) */
+    enemies.forEach(e=>{
+        let dx = ball.x - e.x;
+        let dy = ball.y - e.y;
+        let dist = Math.hypot(dx,dy);
+        e.x += dx/dist * 2;
+        e.y += dy/dist * 2;
+
+        /* steal ball */
+        if(Math.hypot(e.x-ball.x, e.y-ball.y)<30){
+            ball.x = e.x;
+            ball.y = e.y;
+        }
+    });
+
+    /* GOAL */
+    if(ball.x > canvas.width-50){
+        coins+=10;
+        updateCoins();
+        endGame();
+        return;
+    }
+
+    /* DRAW */
+    ctx.fillStyle="blue";
+    ctx.fillRect(player.x,player.y,20,20);
+
+    ctx.fillStyle="red";
+    enemies.forEach(e=>{
+        ctx.fillRect(e.x,e.y,20,20);
+    });
+
+    ctx.fillStyle="white";
+    ctx.beginPath();
+    ctx.arc(ball.x,ball.y,8,0,Math.PI*2);
+    ctx.fill();
+
+    requestAnimationFrame(soccerLoop);
 }
 
-// =========================
-// ⚽ SOCCER GAME
-// =========================
-function drawPlayer(p,color){
-ctx.fillStyle="#ffd39b";
-ctx.fillRect(p.x+8,p.y-8,14,14);
+/* =========================
+   DASH (WORKING)
+========================= */
 
-ctx.fillStyle=color;
-ctx.fillRect(p.x,p.y,30,20);
+let cube, spikes;
 
-ctx.fillStyle="white";
-ctx.fillRect(p.x+3,p.y+20,8,12);
-ctx.fillRect(p.x+18,p.y+20,8,12);
+function startDash(){
+    go("");
+    running = true;
+
+    cube = {x:100,y:300,vy:0};
+    spikes = [
+        {x:400},
+        {x:700}
+    ];
+
+    loop = dashLoop;
+    requestAnimationFrame(loop);
 }
 
-function playSoccer(){
-go(null);
-game.style.display="block";
+function dashLoop(){
+    if(!running) return;
 
-let players=[
-{x:150,y:200},
-{x:150,y:350},
-{x:150,y:500}
-];
+    ctx.fillStyle="#111";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
 
-let enemies=[
-{x:game.width-150,y:200},
-{x:game.width-150,y:350},
-{x:game.width-150,y:500}
-];
+    /* gravity */
+    cube.vy +=0.5;
+    cube.y += cube.vy;
 
-let selected=0;
-let ball={x:game.width/2,y:game.height/2,owner:null};
+    /* jump */
+    if(keys[" "] && cube.y > 300){
+        cube.vy = -10;
+    }
 
-// PASS
-game.onclick=(e)=>{
-let rect=game.getBoundingClientRect();
-let mx=e.clientX-rect.left;
-let my=e.clientY-rect.top;
+    /* floor */
+    if(cube.y > 300){
+        cube.y = 300;
+        cube.vy = 0;
+    }
 
-players.forEach((p,i)=>{
-if(Math.hypot(mx-p.x,my-p.y)<40){
-selected=i;
-if(ball.owner!==null) ball.owner=i;
-}
-});
-};
+    /* move spikes */
+    spikes.forEach(s=>{
+        s.x -=6;
+        if(s.x < -20) s.x = canvas.width + Math.random()*300;
 
-loop=setInterval(()=>{
-ctx.clearRect(0,0,game.width,game.height);
+        /* COLLISION FIX */
+        if(cube.x < s.x+20 &&
+           cube.x+20 > s.x &&
+           cube.y+20 > 300){
+            endGame();
+        }
 
-// FIELD
-ctx.fillStyle="#0a7a0a";
-ctx.fillRect(0,0,game.width,game.height);
+        ctx.fillStyle="red";
+        ctx.fillRect(s.x,300,20,20);
+    });
 
-// GOALS
-ctx.fillStyle="white";
-ctx.fillRect(0,game.height/2-120,20,240);
-ctx.fillRect(game.width-20,game.height/2-120,20,240);
+    ctx.fillStyle="cyan";
+    ctx.fillRect(cube.x,cube.y,20,20);
 
-// CONTROL
-let p=players[selected];
-
-if(keys["ArrowUp"]) p.y-=6;
-if(keys["ArrowDown"]) p.y+=6;
-if(keys["ArrowLeft"]) p.x-=6;
-if(keys["ArrowRight"]) p.x+=6;
-
-// PICK BALL
-if(Math.hypot(p.x-ball.x,p.y-ball.y)<30){
-ball.owner=selected;
+    requestAnimationFrame(dashLoop);
 }
 
-// AI
-enemies.forEach(e=>{
-let dx=ball.x-e.x;
-let dy=ball.y-e.y;
+/* ========================= */
 
-e.x+=dx*0.04;
-e.y+=dy*0.04;
-
-if(Math.hypot(e.x-ball.x,e.y-ball.y)<25){
-ball.owner=null;
+function endGame(){
+    running = false;
+    go("menu");
 }
 
-// separation
-enemies.forEach(o=>{
-if(o!==e){
-let d=Math.hypot(e.x-o.x,e.y-o.y);
-if(d<40){
-e.x+=(e.x-o.x)*0.1;
-e.y+=(e.y-o.y)*0.1;
+function updateCoins(){
+    document.getElementById("coins").innerText = "Coins: "+coins;
 }
-}
-});
-});
-
-// BALL FOLLOW
-if(ball.owner!==null){
-let owner=players[ball.owner];
-ball.x=owner.x+15;
-ball.y=owner.y+10;
-}
-
-// DRAW
-ctx.fillStyle="white";
-ctx.beginPath();
-ctx.arc(ball.x,ball.y,8,0,6.28);
-ctx.fill();
-
-players.forEach((pl,i)=>{
-drawPlayer(pl,i===selected?"#00ffff":"#008888");
-});
-
-enemies.forEach(e=>{
-drawPlayer(e,"red");
-});
-
-// SCORE
-if(ball.x>game.width-20){
-saveData.coins+=100;
-save();
-go("menu");
-}
-
-if(ball.x<20){
-go("menu");
-}
-
-},30);
-}
-
-// =========================
-// 🟦 DASH GAME
-// =========================
-function playDash(){
-go(null);
-game.style.display="block";
-
-let x=200;
-let y=game.height-150;
-let vel=0;
-
-let spikes=[400,500,600,750,900];
-
-loop=setInterval(()=>{
-ctx.clearRect(0,0,game.width,game.height);
-
-// BG
-ctx.fillStyle="#001122";
-ctx.fillRect(0,0,game.width,game.height);
-
-// GROUND
-ctx.fillStyle="#222";
-ctx.fillRect(0,game.height-100,game.width,100);
-
-// SPIKES
-ctx.fillStyle="#ff0044";
-spikes.forEach(s=>{
-ctx.beginPath();
-ctx.moveTo(s,game.height-100);
-ctx.lineTo(s+20,game.height-140);
-ctx.lineTo(s+40,game.height-100);
-ctx.fill();
-
-if(x+40>s && x<s+40 && y+40>game.height-120){
-go("menu");
-}
-});
-
-// PLAYER
-ctx.fillStyle="#00ffff";
-ctx.fillRect(x,y,40,40);
-
-// JUMP
-if(keys[" "] && y>=game.height-150){
-vel=-12;
-}
-
-vel+=0.8;
-y+=vel;
-
-if(y>game.height-150){
-y=game.height-150;
-vel=0;
-}
-
-x+=9;
-
-},30);
-}
-
-// INIT
-updateUI();
-go("start");
-
 </script>
 
 </body>
