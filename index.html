@@ -2,14 +2,14 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Retro Casino 5.2 FIXED</title>
+<title>Retro Games 5.2</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
 <style>
 body{
 margin:0;
 font-family:'Press Start 2P';
-background:#000;
+background:url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e") center/cover;
 color:#0ff;
 overflow:hidden;
 }
@@ -22,14 +22,14 @@ display:flex;
 justify-content:center;
 align-items:center;
 flex-direction:column;
-background:rgba(0,0,0,0.8);
+background:rgba(0,0,0,0.7);
 z-index:10;
 }
 
 .hidden{display:none}
 
 button{
-padding:20px;
+padding:18px;
 margin:10px;
 background:black;
 color:#0ff;
@@ -44,24 +44,31 @@ top:0;
 left:0;
 width:100%;
 height:100%;
-z-index:1;
 display:none;
+z-index:1;
 }
 
 #editorBox{
-width:500px;
-height:300px;
-border:3px solid white;
+width:600px;
+height:350px;
+border:5px solid white;
 position:relative;
-margin-bottom:20px;
+background:#000;
 }
 
 .player{
-width:30px;
-height:30px;
-background:blue;
+width:40px;
+height:40px;
+background:url("https://i.imgur.com/2RMzR8l.png") center/cover;
 position:absolute;
 cursor:grab;
+}
+
+.goalBtn{
+padding:10px;
+margin:5px;
+background:#2c6ed5;
+color:white;
 }
 </style>
 </head>
@@ -69,21 +76,32 @@ cursor:grab;
 
 <!-- START -->
 <div id="start" class="screen">
-<h1>RETRO CASINO</h1>
+<h1>RETRO GAMES</h1>
 <button onclick="go('menu')">START</button>
 </div>
 
 <!-- MENU -->
 <div id="menu" class="screen hidden">
 <button onclick="go('soccerMenu')">SOCCER</button>
-<button onclick="go('editor')">TEAM EDITOR</button>
+<button onclick="startDash()">DASH</button>
 <button onclick="go('settings')">SETTINGS</button>
+<button onclick="go('editor')">TEAM EDITOR</button>
 </div>
 
 <!-- SOCCER MENU -->
 <div id="soccerMenu" class="screen hidden">
 <button onclick="startSoccer()">NORMAL</button>
+<button onclick="startWorldCup()">WORLD CUP (LVL 10)</button>
+<button onclick="go('online')">1V1</button>
 <button onclick="go('menu')">BACK</button>
+</div>
+
+<!-- ONLINE -->
+<div id="online" class="screen hidden">
+<button onclick="createRoom()">CREATE ROOM</button>
+<button onclick="joinRoom()">JOIN ROOM</button>
+<p id="roomCode"></p>
+<button onclick="go('soccerMenu')">BACK</button>
 </div>
 
 <!-- SETTINGS -->
@@ -92,6 +110,12 @@ cursor:grab;
 <button onclick="setDiff(1)">EASY</button>
 <button onclick="setDiff(2)">NORMAL</button>
 <button onclick="setDiff(3)">HARD</button>
+<button onclick="setDiff(4)">EXTREME</button>
+
+<h3>SPEED</h3>
+<button onclick="setSpeed(1)">NORMAL</button>
+<button onclick="setSpeed(2)">FAST</button>
+<button onclick="setSpeed(3)">INSANE</button>
 
 <button onclick="go('menu')">BACK</button>
 </div>
@@ -99,6 +123,13 @@ cursor:grab;
 <!-- EDITOR -->
 <div id="editor" class="screen hidden">
 <div id="editorBox"></div>
+
+<div>
+Goals Needed:
+<button class="goalBtn" onclick="setGoals(1)">1</button>
+<button class="goalBtn" onclick="setGoals(3)">3</button>
+<button class="goalBtn" onclick="setGoals(5)">5</button>
+</div>
 
 <button onclick="saveLayout()">SAVE</button>
 <button onclick="go('menu')">BACK</button>
@@ -111,8 +142,15 @@ cursor:grab;
 // ===== DATA =====
 let data = JSON.parse(localStorage.getItem("retroSave")) || {
 coins:0,
-layout:[{x:50,y:50},{x:200,y:150},{x:350,y:250}],
-difficulty:2
+lvl:1,
+layout:[
+{x:100,y:100},
+{x:300,y:200},
+{x:500,y:150}
+],
+goals:1,
+difficulty:2,
+speed:1
 };
 
 // ===== SAVE =====
@@ -120,44 +158,40 @@ function save(){
 localStorage.setItem("retroSave",JSON.stringify(data));
 }
 
-// ===== SCREEN SYSTEM (FIXED) =====
+// ===== NAV =====
 function go(id){
 stopGame();
-
 document.querySelectorAll(".screen").forEach(s=>s.classList.add("hidden"));
-document.getElementById("game").style.display="none";
-
+game.style.display="none";
 if(id) document.getElementById(id).classList.remove("hidden");
 }
 
 // ===== SETTINGS =====
 function setDiff(d){data.difficulty=d;save();}
+function setSpeed(s){data.speed=s;save();}
+function setGoals(g){data.goals=g;save();}
 
 // ===== EDITOR =====
 let dragging=null;
 
 function loadEditor(){
-let box=document.getElementById("editorBox");
-box.innerHTML="";
-
+editorBox.innerHTML="";
 data.layout.forEach(p=>{
 let el=document.createElement("div");
 el.className="player";
 el.style.left=p.x+"px";
 el.style.top=p.y+"px";
-
 el.onmousedown=()=>dragging=el;
-box.appendChild(el);
+editorBox.appendChild(el);
 });
 
 document.onmousemove=e=>{
 if(dragging){
-let r=box.getBoundingClientRect();
-dragging.style.left=(e.clientX-r.left-15)+"px";
-dragging.style.top=(e.clientY-r.top-15)+"px";
+let r=editorBox.getBoundingClientRect();
+dragging.style.left=(e.clientX-r.left-20)+"px";
+dragging.style.top=(e.clientY-r.top-20)+"px";
 }
 };
-
 document.onmouseup=()=>dragging=null;
 }
 
@@ -169,8 +203,8 @@ save();
 alert("Saved!");
 }
 
-// ===== GAME =====
-const c=document.getElementById("game");
+// ===== CANVAS =====
+const c=game;
 const ctx=c.getContext("2d");
 
 function resize(){
@@ -186,27 +220,32 @@ let keys={};
 onkeydown=e=>keys[e.key]=true;
 onkeyup=e=>keys[e.key]=false;
 
-// ===== STOP LOOP (CRITICAL FIX) =====
 function stopGame(){
 if(loop) clearInterval(loop);
 loop=null;
 }
 
 // ===== SOCCER =====
-function startSoccer(){
-
+function startSoccer(world=false){
 go(null);
 c.style.display="block";
 
-let players=data.layout.map(p=>({x:p.x+100,y:p.y+100}));
-let enemies=[
-{x:c.width-200,y:200},
-{x:c.width-200,y:350},
-{x:c.width-200,y:500}
-];
+let teamSize = world ? 6 : data.layout.length;
+
+let players = data.layout.map(p=>({x:p.x+100,y:p.y+100}));
+let enemies = [];
+
+for(let i=0;i<teamSize;i++){
+enemies.push({
+x:c.width-200,
+y:100+i*80
+});
+}
 
 let ball={x:c.width/2,y:c.height/2};
 let current=0;
+let score=0;
+let enemyScore=0;
 
 loop=setInterval(()=>{
 ctx.clearRect(0,0,c.width,c.height);
@@ -215,8 +254,12 @@ ctx.clearRect(0,0,c.width,c.height);
 ctx.fillStyle="green";
 ctx.fillRect(0,0,c.width,c.height);
 
-// ball
+// goals
 ctx.fillStyle="white";
+ctx.fillRect(20,c.height/2-120,20,240);
+ctx.fillRect(c.width-40,c.height/2-120,20,240);
+
+// ball
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,10,0,6.28);
 ctx.fill();
@@ -227,44 +270,126 @@ ctx.fillStyle="blue";
 ctx.fillRect(p.x,p.y,30,30);
 });
 
-// enemies FIXED
+// enemies (FIXED AI)
 enemies.forEach(e=>{
 let dx=ball.x-e.x;
 let dy=ball.y-e.y;
-e.x+=dx*0.03*data.difficulty;
-e.y+=dy*0.03*data.difficulty;
 
-ctx.fillStyle="red";
-ctx.fillRect(e.x,e.y,30,30);
+e.x+=dx*0.05*data.difficulty;
+e.y+=dy*0.05*data.difficulty;
 
-// steal
-if(Math.abs(e.x-ball.x)<25){
-ball.x-=5;
+// separation
+enemies.forEach(o=>{
+if(o!==e){
+let d=Math.hypot(e.x-o.x,e.y-o.y);
+if(d<40){
+e.x+=(e.x-o.x)*0.1;
+e.y+=(e.y-o.y)*0.1;
+}
 }
 });
 
-// movement (SMOOTH FIX)
+// steal
+if(Math.abs(e.x-ball.x)<30){
+ball.x-=6;
+}
+
+ctx.fillStyle="red";
+ctx.fillRect(e.x,e.y,30,30);
+});
+
+// movement (NO DELAY)
 let p=players[current];
-let speed=6;
+let speed=6*data.speed;
 
 if(keys["ArrowUp"])p.y-=speed;
 if(keys["ArrowDown"])p.y+=speed;
 if(keys["ArrowLeft"])p.x-=speed;
 if(keys["ArrowRight"])p.x+=speed;
 
-// lock ball
+// ball lock
 if(Math.abs(p.x-ball.x)<30){
 ball.x=p.x;
 ball.y=p.y;
 }
 
+// scoring FIX
+if(ball.x>c.width-50){score++;reset();}
+if(ball.x<50){enemyScore++;reset();}
+
+ctx.fillText(score+"-"+enemyScore,c.width/2,50);
+
+if(score>=data.goals || enemyScore>=data.goals){
+end(score>enemyScore);
+}
+
 },30);
 
+function reset(){
+ball.x=c.width/2;
+ball.y=c.height/2;
+players=data.layout.map(p=>({x:p.x+100,y:p.y+100}));
+}
+
+function end(win){
+data.coins+=win?(50*data.goals):20;
+data.lvl++;
+save();
+go("soccerMenu");
+}
+}
+
+// WORLD CUP
+function startWorldCup(){
+if(data.lvl<10){alert("Reach level 10");return;}
+data.goals=5;
+data.difficulty=4;
+startSoccer(true);
+}
+
+// ===== DASH =====
+function startDash(){
+go(null);
+c.style.display="block";
+
+let x=100;
+
+loop=setInterval(()=>{
+ctx.clearRect(0,0,c.width,c.height);
+
+// background
+ctx.fillStyle="#111";
+ctx.fillRect(0,0,c.width,c.height);
+
+// ground
+ctx.fillStyle="#333";
+ctx.fillRect(0,c.height-100,c.width,100);
+
+// cube
+ctx.fillStyle="cyan";
+ctx.fillRect(x,c.height-130,40,40);
+
+x+=6;
+
+if(x>c.width) x=0;
+
+},30);
+}
+
+// ===== ONLINE =====
+function createRoom(){
+let code=Math.random().toString(36).substring(2,6).toUpperCase();
+roomCode.innerText="CODE: "+code;
+}
+function joinRoom(){
+let c=prompt("Enter Code");
+alert("Joined "+c+" (mock)");
 }
 
 // INIT
 go("start");
 loadEditor();
+save();
 
 </script>
 
