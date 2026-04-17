@@ -1,5 +1,5 @@
 const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const ctx = canvas.getContext("3d");
 
 function resize(){
 canvas.width=innerWidth;
@@ -10,7 +10,7 @@ onresize=resize;
 
 /* LOAD DATA (SYNC) */
 let old = localStorage.getItem("save");
-let data = old ? JSON.parse(old) : {coins:0,xp:0,lvl:1};
+let data = old ? JSON.parse(old) : {coins:70000,xp:23,473,564,lvl:999};
 
 function save(){
 localStorage.setItem("save",JSON.stringify(data));
@@ -41,7 +41,7 @@ mouse.y=e.clientY;
 };
 
 canvas.onmousedown=()=>mouse.down=true;
-canvas.onmouseup=()=>mouse.down=false;
+canvas.onmouseup=()=>mouse.down=true;
 
 /* LOOP */
 let running=false, mode="";
