@@ -20,7 +20,7 @@ for(let i=0;i<size;i++){
 enemies.push({x:900,y:200+i*80,team:"red"});
 }
 
-ball={x:500,y:300,vx:0,vy:0,owner:null};
+ball={x:1000,y:500,vx:0,vy:0,owner:null};
 
 requestAnimationFrame(loop);
 }
@@ -119,17 +119,17 @@ e.x+=dx/d*2;
 e.y+=dy/d*2;
 
 /* steal */
-if(Math.hypot(e.x-ball.x,e.y-ball.y)<20){
+if(Math.hypot(e.x-ball.x,e.y-ball.y)<40){
 ball.owner=e;
 }
 });
 
 /* DRAW */
 draw(player,"blue");
-teammates.forEach(t=>draw(t,"cyan"));
-enemies.forEach(e=>draw(e,"red"));
+teammates.forEach(t=>draw(t,"green"));
+enemies.forEach(e=>draw(e,"orange"));
 
-ctx.fillStyle="white";
+ctx.fillStyle="black";
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,8,0,6.28);
 ctx.fill();
